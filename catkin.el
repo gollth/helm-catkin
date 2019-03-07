@@ -7,33 +7,57 @@
 
 ;;; Code:
 
-(defun catkin-cd (ws cmd)
-  (format "cd %s && %s" ws cmd))
+(require 'xterm-color)
 
-(defun catkin-init (ws)
-  "(Re-)Initializes a catkin workspace at path `ws'"
-  (unless (file-exists-p ws)
-    (unless (y-or-n-p (format "Path %s does not exist. Create?" ws))
-      (error "Cannot initialize workspace `%s' since it doesn't exist" ws))
-    (make-directory ws)
-    (make-directory (format "%s/src" ws)))
-  (call-process-shell-command (catkin-cd ws "catkin init")))
+(defconst WS "EMACS_CATKIN_WS")
 
-(defun catkin-source (ws command)
-  "Prepends a source `ws'/devel/setup.bash before `command'"
-  (let ((setup-file (format "%s/devel/setup.bash" ws)))
+(defun catkin-set-ws (ws)
+  (setenv WS ws)
+  )
+
+(defun catkin-cd (cmd)
+  (let ((ws (getenv WS)))
+    (if cmd (format "cd %s && %s" ws cmd))
+    )
+  )
+
+(defun catkin-init ()
+  "(Re-)Initializes a catkin workspace at path"
+  (let ((ws (getenv WS)))
+    (unless (file-exists-p ws)
+      (unless (y-or-n-p (format "Path %s does not exist. Create?" ws))
+        (error "Cannot initialize workspace `%s' since it doesn't exist" ws)
+        )
+      (make-directory (format "%s/src" ws) t)  ; also create parent directiories
+      (call-process-shell-command (format "catkin init --workspace %s" ws))
+      )
+    )
+  )
+
+(defun catkin-source (command)
+  "Prepends a source $EMACS_CATKINB_WS/devel/setup.bash before `command' if such a file exists."
+  (let* ((ws (getenv WS))
+         (setup-file (format "%s/devel/setup.bash" ws)))
     (if (file-exists-p setup-file)
         (format "source %s && %s" setup-file command)
-      command)
-     ))
+      command
+      )
+    )
+  )
 
-(defun catkin-print-config (ws)
-  "Prints the catkin config of `ws' to a new buffer called *catkin-config*"
+(defun catkin-print-config ()
+  "Prints the catkin config of $EMACS_CATKIN_WS to a new buffer called *catkin-config*"
   (switch-to-buffer-other-window "*catkin-config*")
   (erase-buffer)
-  (call-process-shell-command (catkin-source ws (catkin-cd ws "catkin config")) nil t)
-  (other-window 1))
+  (call-process-shell-command (format "catkin --force-color config --workspace %s" (getenv WS)) nil t)
+  (xterm-color-colorize-buffer)
+  (other-window 1)
+  )
 
-(catkin-print-config "~/hello")
+;; Tests
+(catkin-set-ws "/tmp/hello/test/ws")
+(catkin-init)
+(catkin-print-config)
+(catkin-source "catkin config")
 
 ;;; catkin.el ends here

@@ -69,11 +69,11 @@
     )
   )
 
-(defun catkin-build-package (&optional pkg)
+(defun catkin-build-package (&optional pkgs)
   "Build the catkin workspace at $EMACS_CATKIN_WS after sourcing it's ws.
-   If `pkg' is non-nil, only this package is build, otherwise all packages in the ws are build"
-  (let* ((package (if pkg pkg ""))
-         (build-command (catkin-source (format "catkin build --workspace %s %s" (getenv WS) package)))
+   If `pkgs' is non-nil, only these packages are built, otherwise all packages in the ws are build"
+  (let* ((packages (mapconcat 'identity pkgs " "))
+         (build-command (catkin-source (format "catkin build --workspace %s %s" (getenv WS) packages)))
          (buffer (get-buffer-create "*Catkin Build*"))
          (process (progn
                     (async-shell-command build-command buffer)
@@ -104,13 +104,13 @@
   (interactive)
   (helm :sources '((name . "Catkin Build [package]")
                    (candidates . (lambda () (cons "[all]" (catkin-list))))
-                   (action . (lambda (candidate)
-                               (if (string= candidate "[all]")
+                   (action . (("Build" . (lambda (candidate)
+                               (if (member "[all]" (helm-marked-candidates))
                                    (catkin-build-package)
-                                 (catkin-build-package candidate))
-                               )
+                                 (catkin-build-package (helm-marked-candidates))
+                               )))
                            )
-                   )
+                   ))
         )
   )
 

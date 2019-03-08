@@ -12,8 +12,17 @@
 
 (defconst WS "EMACS_CATKIN_WS")
 
-(defun catkin-set-ws (ws)
-  (setenv WS ws)
+(defun catkin-set-ws (&optional ws)
+  (if ws
+      (setenv WS ws)
+    (loop for path in (split-string (getenv "CMAKE_PREFIX_PATH") ":")
+          if (file-exists-p (format "%s/.catkin" path))
+          do (setenv WS path)
+          and do (message (format "Catkin: Setting workspace to %s" path))
+          and do (return)
+          finally do (error "Could not find any catkin workspace within $CMAKE_PREFIX_PATH =(")
+          )
+    )
   )
 
 (defun catkin-cd (cmd)

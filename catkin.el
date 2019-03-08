@@ -7,6 +7,7 @@
 
 ;;; Code:
 
+(require 'helm)
 (require 'xterm-color)
 
 (defconst WS "EMACS_CATKIN_WS")
@@ -68,9 +69,11 @@
     )
   )
 
-(defun catkin-build ()
-  "Build the catkin workspace at $EMACS_CATKIN_WS after sourcing it's ws"
-  (let* ((build-command (catkin-source (format "catkin build --workspace %s" (getenv WS))))
+(defun catkin-build-package (&optional pkg)
+  "Build the catkin workspace at $EMACS_CATKIN_WS after sourcing it's ws.
+   If `pkg' is non-nil, only this package is build, otherwise all packages in the ws are build"
+  (let* ((package (if pkg pkg ""))
+         (build-command (catkin-source (format "catkin build --workspace %s %s" (getenv WS) package)))
          (buffer (get-buffer-create "*Catkin Build*"))
          (process (progn
                     (async-shell-command build-command buffer)
@@ -83,6 +86,34 @@
       )
     )
   )
+
+(defun catkin-list-of-command-output (command)
+  (with-temp-buffer
+    (call-process-shell-command command nil t)
+    (split-string (buffer-string) "\n" t)
+    )
+  )
+
+(defun catkin-list ()
+  "Returns a list of all packages in the workspace at $EMACS_CATKIN_WS"
+  (catkin-list-of-command-output
+   (format "catkin list --workspace %s --unformatted --quiet" (getenv WS)))
+  )
+
+(defun catkin-build ()
+  (interactive)
+  (helm :sources '((name . "Catkin Build [package]")
+                   (candidates . (lambda () (cons "[all]" (catkin-list))))
+                   (action . (lambda (candidate)
+                               (if (string= candidate "[all]")
+                                   (catkin-build-package)
+                                 (catkin-build-package candidate))
+                               )
+                           )
+                   )
+        )
+  )
+
 
 ;; Tests
 (catkin-set-ws "/tmp/hello/test/ws")

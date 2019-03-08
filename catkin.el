@@ -55,23 +55,31 @@
   )
 
 (defun catkin-build-finished (process signal)
+  "This gets called, once the catkin build command finishes. It marks the buffer
+   as read-only and asks to close the window"
   (when (memq (process-status process) '(exit signal))
     (message "Catkin build done!")
-    (switch-to-buffer-other-window "*Catkin Build*")
-    (evil-normal-state)   ; leave insert mode
-    (other-window 1)
+    (other-window 1)     ; select the first "other" window, i.e. the build window
+    (evil-normal-state)  ; leave insert mode
+    (read-only-mode)     ; mark as not-editable
+    (when (y-or-n-p "Catkin build done. Close window?")
+      (delete-window)
+      )
     )
   )
+
 (defun catkin-build ()
-  "Build the catkin workspace at $EMACS_CATKIN_WS"
-  (let* ((buffer (get-buffer-create "*Catkin Build*"))
+  "Build the catkin workspace at $EMACS_CATKIN_WS after sourcing it's ws"
+  (let* ((build-command (catkin-source (format "catkin build --workspace %s" (getenv WS))))
+         (buffer (get-buffer-create "*Catkin Build*"))
          (process (progn
-                    (async-shell-command (format "catkin build --workspace %s" (getenv WS)) buffer)
+                    (async-shell-command build-command buffer)
                     (get-buffer-process buffer)
-                    )))
+                    ))
+         )
     (if (process-live-p process)
         (set-process-sentinel process #'catkin-build-finished)
-      (message "No process running")
+      (error "Could not attach process sentinel to \"catkin build\" since no such process is running")
       )
     )
   )

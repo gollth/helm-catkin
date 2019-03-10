@@ -147,15 +147,16 @@
    packages to build in the current workspace. C-SPC will enable
    multiple selections while M-a selects all packages."
   (interactive)
-  (helm :sources '((name . "Catkin Build [package]")
-                   (candidates . (lambda () (cons "[all]" (catkin-list))))
-                   (action . (("Build" . (lambda (candidate)
-                               (if (member "[all]" (helm-marked-candidates))
-                                   (catkin-build-package)
-                                 (catkin-build-package (helm-marked-candidates))
-                               )))
-                           )
-                   ))
+  (helm :buffer "*helm catkin list*"
+        :sources (helm-build-sync-source "Packages"
+                   :candidates (catkin-list-candidates)
+                   :fuzzy-match t
+                   :action '(("Build" . (lambda (c) (catkin-build-package (helm-marked-candidates))))
+                             ("Open Folder" . catkin-open-pkg-dired)
+                             ("Open CMakeLists.txt" . (lambda (c) (catkin-open-pkg-cmakelist (helm-marked-candidates))))
+                             ("Open package.xml" . (lambda (c) (catkin-open-pkg-package (helm-marked-candidates))))
+                             )
+                   )
         )
   )
 

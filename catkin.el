@@ -93,15 +93,26 @@
    )
   )
 
+(defun catkin-config-no-cmake-args ()
+  "Removes all cmake args for the curArent workspace at $EMACS_CATKIN_WS"
+(message "Clearing all cmake args...")
+  (call-process-shell-command
+   (format "catkin config --workspace %s --no-cmake-args" (getenv WS))
+   )
+  )
+
 (defun catkin-config-set-cmake-args (args)
   "Sets a list of cmake args for the current workspace at $EMACS_CATKIN_WS.
    Passing an empty list to `args' will clear all currently set args."
-  (call-process-shell-command
-   (format "catkin config --workspace %s --cmake-args %s"
-           (getenv WS)
-           (catkin-util-format-list args " ")
-           )
-   )
+  (if (null args) (catkin-config-no-cmake-args)
+    (message "setting args to %s" args)
+    (call-process-shell-command
+     (format "catkin config --workspace %s --cmake-args %s"
+             (getenv WS)
+             (catkin-util-format-list args " ")
+             )
+     )
+    )
   )
 
 (defun catkin-config-add-cmake-args (args)

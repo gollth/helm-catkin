@@ -109,6 +109,38 @@
    (format "catkin list --workspace %s --unformatted --quiet" (getenv WS)))
   )
 
+(defun catkin-get-absolute-path-of-pkg (pkg)
+  "Returns the absolute path of `pkg' by calling \"rospack find ...\""
+  (shell-command-to-string (catkin-source (format "printf $(rospack find %s)" pkg)))
+  )
+
+(defun catkin-open-file-in (pkg file)
+  "Opens the file at \"$(rospack find pkg)/file\". `file' can be a
+   relative path to `pkg'."
+  (interactive)
+  (find-file (format "%s/%s" (catkin-get-absolute-path-of-pkg pkg) file))
+  )
+
+(defun catkin-open-pkg-cmakelist (pkgs)
+  "Opens the 'CMakeLists.txt' file for each of the package names within `pkgs'"
+  (loop for pkg in pkgs
+        do (catkin-open-file-in pkg "CMakeLists.txt")
+        )
+  )
+
+(defun catkin-open-pkg-package (pkgs)
+  "Opens the 'package.xml' file for each of the package names within `pkgs'"
+  (loop for pkg in pkgs
+        do (catkin-open-file-in pkg "package.xml")
+        )
+  )
+
+(defun catkin-open-pkg-dired (pkg)
+  "Opens the absolute path of `pkg' in dired."
+  (interactive)
+  (dired (catkin-get-absolute-path-of-pkg pkg))
+  )
+
 (defun catkin-build ()
   (interactive)
   (helm :sources '((name . "Catkin Build [package]")

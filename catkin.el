@@ -55,13 +55,26 @@
     )
   )
 
-(defun catkin-print-config ()
+(defun catkin-config-print ()
   "Prints the catkin config of $EMACS_CATKIN_WS to a new buffer called *catkin-config*"
   (switch-to-buffer-other-window "*catkin-config*")
   (erase-buffer)
-  (call-process-shell-command (format "catkin --force-color config --workspace %s" (getenv WS)) nil t)
+  ; Pipe stderr to null to supress "could not determine width" warning
+  (call-process-shell-command (format "catkin --force-color config --workspace %s 2> /dev/null" (getenv WS)) nil t)
   (xterm-color-colorize-buffer)
   (other-window 1)
+  )
+
+(defun catkin-config-cmake-args ()
+  "Returns a list of all currenty set cmake args for the workspace
+   at $EMACS_CATKIN_WS"
+  (catkin-util-command-to-list
+   ; Supress stderr for "Could not determine width of terminal" warnings
+   (format "catkin --no-color config --workspace %s 2> /dev/null | sed -n 's/Additional CMake Args:\s*//p'"
+           (getenv WS)
+           )
+   " "
+   )
   )
 
 (defun catkin-config-set-cmake-args (args)
@@ -69,6 +82,30 @@
    Passing an empty list to `args' will clear all currently set args."
   (call-process-shell-command
    (format "catkin config --workspace %s --cmake-args %s"
+           (getenv WS)
+           (catkin-util-format-list args " ")
+           )
+   )
+  )
+
+(defun catkin-config-add-cmake-args (args)
+  "Adds a list of cmake args to the existing set of cmake args for the
+   current workspace at $EMACS_CATKIN_WS."
+  (call-process-shell-command
+   (format "catkin config --workspace %s --append-args --cmake-args %s"
+            (getenv WS)
+            (catkin-util-format-list args " ")
+            )
+   )
+  )
+
+(defun catkin-config-remove-cmake-args (args)
+  "Removes a list of cmake args from the existing set of cmake args for
+   the current workspace at $EMACS_CATKIN_WS. Args which are currently
+   not set and are requested to be removed don't provoce an error and
+   are just ignored."
+  (call-process-shell-command
+   (format "catkin config --workspace %s --remove-args --cmake-args %s"
            (getenv WS)
            (catkin-util-format-list args " ")
            )
@@ -111,17 +148,20 @@
     )
   )
 
-(defun catkin-list-of-command-output (command)
-  "Returns each line of the stdout of `command' as elements of a list"
-  (with-temp-buffer
-    (call-process-shell-command command nil t)
-    (split-string (buffer-string) "\n" t)
+(defun catkin-util-command-to-list (command &optional separator)
+  "Returns each part of the stdout of `command' as elements of a list.
+   If `separator' is nil, the newline character is used to split stdout."
+  (let ((sep (if separator separator "\n")))
+    (with-temp-buffer
+      (call-process-shell-command command nil t)
+      (split-string (buffer-string) sep t)
+      )
     )
   )
 
 (defun catkin-list ()
   "Returns a list of all packages in the workspace at $EMACS_CATKIN_WS"
-  (catkin-list-of-command-output
+  (catkin-util-command-to-list
    (format "catkin list --workspace %s --unformatted --quiet" (getenv WS)))
   )
 

@@ -139,6 +139,26 @@
    )
   )
 
+(defvar catkin-config-cmake-sources
+  (helm-build-sync-source "CMake"
+    :candidates 'catkin-config-cmake-args
+    :action '(("Clear" . (lambda (_) (catkin-config-remove-cmake-args (helm-marked-candidates)))))
+    )
+  )
+
+(defvar catkin-config-make-sources
+  (helm-build-sync-source "Make"
+    :candidates '("-j4" "-h")
+    )
+  )
+
+(defun catkin-config ()
+  (interactive)
+  (helm :buffer "*helm catkin config*"
+        :sources '(catkin-config-cmake-sources catkin-config-make-sources)
+        )
+  )
+
 (defun catkin-build-finished (process signal)
   "This gets called, once the catkin build command finishes. It marks the buffer
    as read-only and asks to close the window"

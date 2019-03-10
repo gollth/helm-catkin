@@ -97,6 +97,7 @@
   )
 
 (defun catkin-list-of-command-output (command)
+  "Returns each line of the stdout of `command' as elements of a list"
   (with-temp-buffer
     (call-process-shell-command command nil t)
     (split-string (buffer-string) "\n" t)
@@ -142,6 +143,9 @@
   )
 
 (defun catkin-build ()
+  "Prompts the user via a helm dialog to select one or more
+   packages to build in the current workspace. C-SPC will enable
+   multiple selections while M-a selects all packages."
   (interactive)
   (helm :sources '((name . "Catkin Build [package]")
                    (candidates . (lambda () (cons "[all]" (catkin-list))))

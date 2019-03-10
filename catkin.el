@@ -12,6 +12,22 @@
 
 (defconst WS "EMACS_CATKIN_WS")
 
+(defun catkin-util-format-list (list sep)
+  (mapconcat 'identity list sep)
+  )
+
+(defun catkin-util-command-to-list (command &optional separator)
+  "Returns each part of the stdout of `command' as elements of a list.
+   If `separator' is nil, the newline character is used to split stdout."
+  (let ((sep (if separator separator "\n")))
+    (with-temp-buffer
+      (call-process-shell-command command nil t)
+      (split-string (buffer-string) sep t)
+      )
+    )
+  )
+
+
 (defun catkin-set-ws (&optional ws)
   (if ws
       (setenv WS ws)
@@ -126,9 +142,6 @@
     )
   )
 
-(defun catkin-util-format-list (list sep)
-  (mapconcat 'identity list sep)
-  )
 
 (defun catkin-build-package (&optional pkgs)
   "Build the catkin workspace at $EMACS_CATKIN_WS after sourcing it's ws.
@@ -148,21 +161,21 @@
     )
   )
 
-(defun catkin-util-command-to-list (command &optional separator)
-  "Returns each part of the stdout of `command' as elements of a list.
-   If `separator' is nil, the newline character is used to split stdout."
-  (let ((sep (if separator separator "\n")))
-    (with-temp-buffer
-      (call-process-shell-command command nil t)
-      (split-string (buffer-string) sep t)
-      )
-    )
-  )
-
 (defun catkin-list ()
   "Returns a list of all packages in the workspace at $EMACS_CATKIN_WS"
   (catkin-util-command-to-list
    (format "catkin list --workspace %s --unformatted --quiet" (getenv WS)))
+  )
+
+(defun catkin-list-candidates (&optional include-all-option)
+  "Assembes the list of packages in the current workspace.
+   If the `include-all-option' parameter is non-nil another
+   item with the value \"[*]\" is prepended to the list."
+  (if include-all-option
+      (cons "[*]" (catkin-list))
+    ; else
+    (catkin-list)
+    )
   )
 
 (defun catkin-get-absolute-path-of-pkg (pkg)

@@ -64,6 +64,17 @@
   (other-window 1)
   )
 
+(defun catkin-config-set-cmake-args (args)
+  "Sets a list of cmake args for the current workspace at $EMACS_CATKIN_WS.
+   Passing an empty list to `args' will clear all currently set args."
+  (call-process-shell-command
+   (format "catkin config --workspace %s --cmake-args %s"
+           (getenv WS)
+           (catkin-util-format-list args " ")
+           )
+   )
+  )
+
 (defun catkin-build-finished (process signal)
   "This gets called, once the catkin build command finishes. It marks the buffer
    as read-only and asks to close the window"
@@ -78,10 +89,14 @@
     )
   )
 
+(defun catkin-util-format-list (list sep)
+  (mapconcat 'identity list sep)
+  )
+
 (defun catkin-build-package (&optional pkgs)
   "Build the catkin workspace at $EMACS_CATKIN_WS after sourcing it's ws.
    If `pkgs' is non-nil, only these packages are built, otherwise all packages in the ws are build"
-  (let* ((packages (mapconcat 'identity pkgs " "))
+  (let* ((packages (catkin-util-format-list pkgs " "))
          (build-command (catkin-source (format "catkin build --workspace %s %s" (getenv WS) packages)))
          (buffer (get-buffer-create "*Catkin Build*"))
          (process (progn

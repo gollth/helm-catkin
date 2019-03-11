@@ -81,75 +81,67 @@
   (other-window 1)
   )
 
-(defun catkin-config-cmake-args ()
-  "Returns a list of all currenty set cmake args for the workspace
-   at $EMACS_CATKIN_WS"
+(defun catkin-config-args (operation &optional args)
+  (let ((arg-string (catkin-util-format-list args " ")))
+    (call-process-shell-command
+       (format "catkin config --workspace %s %s %s" (getenv WS) operation arg-string)
+     )
+   )
+  )
+(defun catkin-config-args-find (filter)
   (catkin-util-command-to-list
-   ; Supress stderr for "Could not determine width of terminal" warnings
-   (format "catkin --no-color config --workspace %s 2> /dev/null | sed -n 's/Additional CMake Args:\s*//p'"
+   ;; due to https://github.com/catkin/catkin_tools/issues/519 catkin config without args
+   ;; clears make-args, thats why we use the -a switch to prevent that until this gets fixed
+   ;; Supress stderr for "Could not determine width of terminal" warnings
+   (format "catkin --no-color config -a --workspace %s 2> /dev/null | sed -n 's/%s//p'"
            (getenv WS)
+           filter
            )
    " "
    )
   )
 
-(defun catkin-config-no-cmake-args ()
-  "Removes all cmake args for the curArent workspace at $EMACS_CATKIN_WS"
-(message "Clearing all cmake args...")
-  (call-process-shell-command
-   (format "catkin config --workspace %s --no-cmake-args" (getenv WS))
-   )
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                  CMAKE Args                                ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun catkin-config-cmake-args ()
+  "Returns a list of all currenty set cmake args for the workspace
+   at $EMACS_CATKIN_WS"
+  (catkin-config-args-find "Additional CMake Args:\s*")
   )
 
-(defun catkin-config-set-cmake-args (args)
+(defalias 'catkin-config-cmake-args-clear (apply-partially 'catkin-config-args "--no-cmake-args")
+  "Removes all cmake args for the current workspace at $EMACS_CATKIN_WS"
+  )
+(defalias 'catkin-config-cmake-args-set (apply-partially 'catkin-config-args "--cmake-args")
   "Sets a list of cmake args for the current workspace at $EMACS_CATKIN_WS.
    Passing an empty list to `args' will clear all currently set args."
-  (if (null args) (catkin-config-no-cmake-args)
-    (message "setting args to %s" args)
-    (call-process-shell-command
-     (format "catkin config --workspace %s --cmake-args %s"
-             (getenv WS)
-             (catkin-util-format-list args " ")
-             )
-     )
-    )
   )
 
-(defun catkin-config-add-cmake-args (args)
+(defalias 'catkin-config-cmake-args-add (apply-partially 'catkin-config-args "--append-args --cmake-args")
   "Adds a list of cmake args to the existing set of cmake args for the
    current workspace at $EMACS_CATKIN_WS."
-  (call-process-shell-command
-   (format "catkin config --workspace %s --append-args --cmake-args %s"
-            (getenv WS)
-            (catkin-util-format-list args " ")
-            )
-   )
   )
-
-(defun catkin-config-remove-cmake-args (args)
+(defalias 'catkin-config-cmake-args-remove (apply-partially 'catkin-config-args "--remove-args --cmake-args")
   "Removes a list of cmake args from the existing set of cmake args for
    the current workspace at $EMACS_CATKIN_WS. Args which are currently
    not set and are requested to be removed don't provoce an error and
    are just ignored."
-  (call-process-shell-command
-   (format "catkin config --workspace %s --remove-args --cmake-args %s"
-           (getenv WS)
-           (catkin-util-format-list args " ")
-           )
-   )
   )
-
 (defun catkin-config-cmake-change (arg)
+  "Prompts the user to enter a new value for a CMake arg. The prompt in the
+   minibuffer is autofilled with `arg' and the new entered value will be returned."
   (interactive)
   (let ((new-arg (helm-read-string "Adjust value for CMake Arg: " arg)))
-    (catkin-config-remove-cmake-args (list arg))
-    (catkin-config-add-cmake-args (list new-arg))
+    (catkin-config-cmake-args-remove (list arg))
+    (catkin-config-cmake-args-add (list new-arg))
     )
   )
 
-(defun catkin-config-cmake-new (arg)
+(defun catkin-config-cmake-new (&optional _)
+  "Prompts the user to enter a new CMake arg which will be returned."
   (interactive)
-  (catkin-config-add-cmake-args (list (helm-read-string "New CMake Arg: ")))
+  (catkin-config-cmake-args-add (list (helm-read-string "New CMake Arg: ")))
   )
 
 (defvar catkin-config-cmake-sources
@@ -158,22 +150,127 @@
     :action '(
               ("Change" . catkin-config-cmake-change)
               ("Add" . catkin-config-cmake-new)
-              ("Clear" . (lambda (_) (catkin-config-remove-cmake-args (helm-marked-candidates))))
+              ("Clear" . (lambda (_) (catkin-config-cmake-args-remove (helm-marked-candidates))))
               )
-
     )
+  )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                   MAKE Args                                ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun catkin-config-make-args ()
+  "Returns a list of all currenty set make args for the workspace
+   at $EMACS_CATKIN_WS"
+  (catkin-config-args-find "Additional Make Args:\s*")
+  )
+
+(defalias 'catkin-config-make-args-clear (apply-partially 'catkin-config-args "--no-make-args")
+  "Removes all make args for the current workspace at $EMACS_CATKIN_WS"
+  )
+(defalias 'catkin-config-make-args-set (apply-partially 'catkin-config-args "--make-args")
+  "Sets a list of make args for the current workspace at $EMACS_CATKIN_WS.
+   Passing an empty list to `args' will clear all currently set args."
+  )
+
+(defalias 'catkin-config-make-args-add (apply-partially 'catkin-config-args "--append-args --make-args")
+  "Adds a list of make args to the existing set of make args for the
+   current workspace at $EMACS_CATKIN_WS."
+  )
+(defalias 'catkin-config-make-args-remove (apply-partially 'catkin-config-args "--remove-args --make-args")
+  "Removes a list of make args from the existing set of make args for
+   the current workspace at $EMACS_CATKIN_WS. Args which are currently
+   not set and are requested to be removed don't provoce an error and
+   are just ignored."
+  )
+(defun catkin-config-make-change (arg)
+  "Prompts the user to enter a new value for a Make arg. The prompt in the
+   minibuffer is autofilled with `arg' and the new entered value will be returned."
+  (interactive)
+  (let ((new-arg (helm-read-string "Adjust value for Make Arg: " arg)))
+    (catkin-config-make-args-remove (list arg))
+    (catkin-config-make-args-add (list new-arg))
+    )
+  )
+
+(defun catkin-config-make-new (&optional _)
+  "Prompts the user to enter a new Make arg which will be returned."
+  (interactive)
+  (catkin-config-make-args-add (list (helm-read-string "New Make Arg: ")))
   )
 
 (defvar catkin-config-make-sources
   (helm-build-sync-source "Make"
-    :candidates '("-j4" "-h")
+    :candidates 'catkin-config-make-args
+    :action '(
+              ("Change" . catkin-config-make-change)
+              ("Add" . catkin-config-make-new)
+              ("Clear" . (lambda (_) (catkin-config-make-args-remove (helm-marked-candidates))))
+              )
     )
   )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                   CATKIN-MAKE Args                                ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun catkin-config-catkin-make-args ()
+  "Returns a list of all currenty set catkin-make args for the workspace
+   at $EMACS_CATKIN_WS"
+  (catkin-config-args-find "Additional catkin Make Args:\s*")
+  )
+
+(defalias 'catkin-config-catkin-make-args-clear (apply-partially 'catkin-config-args "--no-catkin-make-args")
+  "Removes all catkin-make args for the current workspace at $EMACS_CATKIN_WS"
+  )
+(defalias 'catkin-config-catkin-make-args-set (apply-partially 'catkin-config-args "--catkin-make-args")
+  "Sets a list of catkin-make args for the current workspace at $EMACS_CATKIN_WS.
+   Passing an empty list to `args' will clear all currently set args."
+  )
+
+(defalias 'catkin-config-catkin-make-args-add (apply-partially 'catkin-config-args "--append-args --catkin-make-args")
+  "Adds a list of catkin-make args to the existing set of catkin-make args for the
+   current workspace at $EMACS_CATKIN_WS."
+  )
+(defalias 'catkin-config-catkin-make-args-remove (apply-partially 'catkin-config-args "--remove-args --catkin-make-args")
+  "Removes a list of catkin-make args from the existing set of catkin-make args for
+   the current workspace at $EMACS_CATKIN_WS. Args which are currently
+   not set and are requested to be removed don't provoce an error and
+   are just ignored."
+  )
+(defun catkin-config-catkin-make-change (arg)
+  "Prompts the user to enter a new value for a Catkin-Make arg. The prompt in the
+   minibuffer is autofilled with `arg' and the new entered value will be returned."
+  (interactive)
+  (let ((new-arg (helm-read-string "Adjust value for Catkin-Make Arg: " arg)))
+    (catkin-config-catkin-make-args-remove (list arg))
+    (catkin-config-catkin-make-args-add (list new-arg))
+    )
+  )
+
+(defun catkin-config-catkin-make-new (&optional _)
+  "Prompts the user to enter a new Catkin-Make arg which will be returned."
+  (interactive)
+  (catkin-config-catkin-make-args-add (list (helm-read-string "New Catkin-Make Arg: ")))
+  )
+
+(defvar catkin-config-catkin-make-sources
+  (helm-build-sync-source "Catkin-Make"
+    :candidates 'catkin-config-catkin-make-args
+    :action '(
+              ("Change" . catkin-config-catkin-make-change)
+              ("Add" . catkin-config-catkin-make-new)
+              ("Clear" . (lambda (_) (catkin-config-catkin-make-args-remove (helm-marked-candidates))))
+              )
+    )
+  )
+
 
 (defun catkin-config ()
   (interactive)
   (helm :buffer "*helm catkin config*"
-        :sources '(catkin-config-cmake-sources catkin-config-make-sources)
+        :sources '(catkin-config-cmake-sources
+                   catkin-config-make-sources
+                   catkin-config-catkin-make-sources
+                   )
         )
   )
 
@@ -279,9 +376,12 @@
 
 
 ;; Tests
-(catkin-set-ws "/tmp/hello/test/ws")
-(catkin-init)
-(catkin-print-config)
-(catkin-source "catkin config")
+(catkin-set-ws "~/ros/util")
+(catkin-config-cmake-args-clear)
+(catkin-config-cmake-args-set '("-DCMAKE_BUILD_TYPE=Release"))
+(catkin-config-cmake-args-add '("-DCHELLO" "-DCFOO=bar"))
+(catkin-config-cmake-args-remove '("-DCHELLO" "BLUB"))
+(catkin-config-make-args-set '("-j4"))
+(catkin-config)
 
 ;;; catkin.el ends here

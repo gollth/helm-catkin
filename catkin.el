@@ -139,10 +139,28 @@
    )
   )
 
+(defun catkin-config-cmake-change (arg)
+  (interactive)
+  (let ((new-arg (helm-read-string "Adjust value for CMake Arg: " arg)))
+    (catkin-config-remove-cmake-args (list arg))
+    (catkin-config-add-cmake-args (list new-arg))
+    )
+  )
+
+(defun catkin-config-cmake-new (arg)
+  (interactive)
+  (catkin-config-add-cmake-args (list (helm-read-string "New CMake Arg: ")))
+  )
+
 (defvar catkin-config-cmake-sources
   (helm-build-sync-source "CMake"
     :candidates 'catkin-config-cmake-args
-    :action '(("Clear" . (lambda (_) (catkin-config-remove-cmake-args (helm-marked-candidates)))))
+    :action '(
+              ("Change" . catkin-config-cmake-change)
+              ("Add" . catkin-config-cmake-new)
+              ("Clear" . (lambda (_) (catkin-config-remove-cmake-args (helm-marked-candidates))))
+              )
+
     )
   )
 

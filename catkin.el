@@ -263,6 +263,59 @@
     )
   )
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                   Whitelist/Blacklist                      ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun catkin-config-whitelist ()
+  "Returns a list of all currenty whitelisted packages for the workspace
+   at $EMACS_CATKIN_WS"
+  (catkin-config-args-find "Whitelisted Packages:\s*")
+  )
+(defalias 'catkin-config-whitelist-add (apply-partially 'catkin-config-args "--append-args --whitelist")
+  "Marks a list of packages to be whitelisted for the current workspace at $EMACS_CATKIN_WS."
+  )
+(defalias 'catkin-config-whitelist-remove (apply-partially 'catkin-config-args "--remove-args --whitelist")
+  "Removes a list of whitelisted packages from the existing whitelist for
+   the current workspace at $EMACS_CATKIN_WS. Packages which are currently
+   not whitelisted and are requested to be removed don't provoce an error and
+   are just ignored."
+  )
+(defvar catkin-config-whitelist-sources
+  (helm-build-sync-source "Whitelist"
+    :candidates 'catkin-config-whitelist
+    :action '(("Un-Whitelist" . (lambda (_) (catkin-config-whitelist-remove (helm-marked-candidates)))))
+    )
+  )
+
+(defun catkin-config-blacklist ()
+  "Returns a list of all currenty blacklisted packages for the workspace
+   at $EMACS_CATKIN_WS"
+  (catkin-config-args-find "Blacklisted Packages:\s*")
+  )
+(defalias 'catkin-config-blacklist-add (apply-partially 'catkin-config-args "--append-args --blacklist")
+  "Marks a list of packages to be blacklisted for the current workspace at $EMACS_CATKIN_WS."
+  )
+(defalias 'catkin-config-blacklist-remove (apply-partially 'catkin-config-args "--remove-args --blacklist")
+  "Removes a list of blacklisted packages from the existing blacklist for
+   the current workspace at $EMACS_CATKIN_WS. Packages which are currently
+   not blacklisted and are requested to be removed don't provoce an error and
+   are just ignored."
+  )
+(defvar catkin-config-blacklist-sources
+  (helm-build-sync-source "Blacklist"
+    :candidates 'catkin-config-blacklist
+    :action '(("Un-Blacklist" . (lambda (_) (catkin-config-blacklist-remove (helm-marked-candidates)))))
+    )
+  )
+(defvar catkin-config-packages-sources
+  (helm-build-sync-source "Packages"
+    :candidates 'catkin-list-candidates
+    :action '(
+              ("Blacklist" . (lambda (_) (catkin-config-blacklist-add (helm-marked-candidates))))
+              ("Whitelist" . (lambda (_) (catkin-config-whitelist-add (helm-marked-candidates))))
+              )
+    )
+  )
 
 (defun catkin-config ()
   (interactive)
@@ -270,6 +323,9 @@
         :sources '(catkin-config-cmake-sources
                    catkin-config-make-sources
                    catkin-config-catkin-make-sources
+                   catkin-config-whitelist-sources
+                   catkin-config-blacklist-sources
+                   catkin-config-packages-sources
                    )
         )
   )

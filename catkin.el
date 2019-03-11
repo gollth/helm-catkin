@@ -148,9 +148,9 @@
   (helm-build-sync-source "CMake"
     :candidates 'catkin-config-cmake-args
     :action '(
-              ("Change" . catkin-config-cmake-change)
-              ("Add" . catkin-config-cmake-new)
-              ("Clear" . (lambda (_) (catkin-config-cmake-args-remove (helm-marked-candidates))))
+              ("Change" . (lambda (x) (catkin-config-cmake-change x) (catkin-config)))
+              ("Add" . (lambda (x) (catkin-config-cmake-new x) (catkin-config)))
+              ("Clear" . (lambda (_) (catkin-config-cmake-args-remove (helm-marked-candidates)) (catkin-config)))
               )
     )
   )
@@ -202,9 +202,9 @@
   (helm-build-sync-source "Make"
     :candidates 'catkin-config-make-args
     :action '(
-              ("Change" . catkin-config-make-change)
-              ("Add" . catkin-config-make-new)
-              ("Clear" . (lambda (_) (catkin-config-make-args-remove (helm-marked-candidates))))
+              ("Change" . (lambda (x) (catkin-config-make-change x) (catkin-config)))
+              ("Add" . (lambda (x) (catkin-config-make-new x) (catkin-config)))
+              ("Clear" . (lambda (_) (catkin-config-make-args-remove (helm-marked-candidates)) (catkin-config)))
               )
     )
   )
@@ -256,9 +256,9 @@
   (helm-build-sync-source "Catkin-Make"
     :candidates 'catkin-config-catkin-make-args
     :action '(
-              ("Change" . catkin-config-catkin-make-change)
-              ("Add" . catkin-config-catkin-make-new)
-              ("Clear" . (lambda (_) (catkin-config-catkin-make-args-remove (helm-marked-candidates))))
+              ("Change" . (lambda (x) (catkin-config-catkin-make-change x) (catkin-config)))
+              ("Add" . (lambda (x) (catkin-config-catkin-make-new x) (catkin-config)))
+              ("Clear" . (lambda (_) (catkin-config-catkin-make-args-remove (helm-marked-candidates)) (catkin-config)))
               )
     )
   )
@@ -283,7 +283,7 @@
 (defvar catkin-config-whitelist-sources
   (helm-build-sync-source "Whitelist"
     :candidates 'catkin-config-whitelist
-    :action '(("Un-Whitelist" . (lambda (_) (catkin-config-whitelist-remove (helm-marked-candidates)))))
+    :action '(("Un-Whitelist" . (lambda (_) (catkin-config-whitelist-remove (helm-marked-candidates)) (catkin-config))))
     )
   )
 
@@ -304,15 +304,15 @@
 (defvar catkin-config-blacklist-sources
   (helm-build-sync-source "Blacklist"
     :candidates 'catkin-config-blacklist
-    :action '(("Un-Blacklist" . (lambda (_) (catkin-config-blacklist-remove (helm-marked-candidates)))))
+    :action '(("Un-Blacklist" . (lambda (_) (catkin-config-blacklist-remove (helm-marked-candidates)) (catkin-config))))
     )
   )
 (defvar catkin-config-packages-sources
   (helm-build-sync-source "Packages"
     :candidates 'catkin-list-candidates
     :action '(
-              ("Blacklist" . (lambda (_) (catkin-config-blacklist-add (helm-marked-candidates))))
-              ("Whitelist" . (lambda (_) (catkin-config-whitelist-add (helm-marked-candidates))))
+              ("Blacklist" . (lambda (_) (catkin-config-blacklist-add (helm-marked-candidates)) (catkin-config)))
+              ("Whitelist" . (lambda (_) (catkin-config-whitelist-add (helm-marked-candidates)) (catkin-config)))
               )
     )
   )

@@ -22,11 +22,10 @@
   (let ((sep (if separator separator "\n")))
     (with-temp-buffer
       (call-process-shell-command command nil t)
-      (split-string (buffer-string) sep t)
+      (split-string (substring (buffer-string) 0 -1) sep t)
       )
     )
   )
-
 
 (defun catkin-set-ws (&optional ws)
   (if ws
@@ -83,9 +82,11 @@
 
 (defun catkin-config-args (operation &optional args)
   (let ((arg-string (catkin-util-format-list args " ")))
-    (call-process-shell-command
-       (format "catkin config --workspace %s %s %s" (getenv WS) operation arg-string)
-     )
+    (substring
+     (call-process-shell-command
+      (format "catkin config --workspace %s %s %s" (getenv WS) operation arg-string)
+      )
+     0 -1)
    )
   )
 (defun catkin-config-args-find (filter)

@@ -18,6 +18,10 @@
 (require 'xterm-color)
 
 (defconst catkin--WS "EMACS_CATKIN_WS")
+(defun catkin--setup ()
+  "Calls `catkin--set-ws' without arguments if $EMACS_CATKIN_WS is not set."
+  (if (null (getenv catkin--WS)) (catkin--set-ws))
+  )
 
 (defun catkin--util-format-list (list sep)
   "Combines the elements of LIST into a string joined by SEP"
@@ -39,16 +43,26 @@ If SEPARATOR is nil, the newline character is used to split stdout."
   (shell-command-to-string (catkin--source (format "printf $(rospack find %s)" pkg)))
   )
 
+;;;###autoload
+(defun catkin-set-workspace (&optional path)
+  "Sets the current catkin workspace to PATH. If PATH is nil the user is prompted to enter the path"
+  (interactive)
+  (if path (catkin--set-ws path)
+      (catkin--set-ws (helm-read-string "Set catkin workspace: " (getenv catkin--WS)))
+      )
+  (message (format "Catkin workspace set to %s" (getenv catkin--WS)))
+  )
 
-(defun catkin-set-ws (&optional ws)
-  "Tells EMACS which workspace to use for all `catkin-' commands.
+(defun catkin--set-ws (&optional ws)
+  "Tells EMACS which workspace to use for all `catkin' commands.
 It sets the environment variable EMACS_CATKIN_WS to the value of WS. When WS is nil
-similar to 'roscd' this function looks in all values within $CMAKE_PREFIX_PATH
+similar to `roscd' this function looks in all values within $CMAKE_PREFIX_PATH
 and chooses the first one as WS which contains a '.catkin' file"
   (let (cmake-prefix-path (getenv "CMAKE_PREFIX_PATH"))
     (cond (ws (setenv catkin--WS ws))
           ((null cmake-prefix-path)
-           (error "Cannot automatically set catkin workspace because $CMAKE_PREFIX_PATH is not set. Source a workspace in .bashrc or call `setenv'"))
+           (error "Cannot automatically set catkin workspace because $CMAKE_PREFIX_PATH is not set.
+Check the value of CMAKE_PREFIX_PATH with `setenv' and/or call `catkin--set-ws' with a path to your workspace (e.g. \"/opt/ros/kinetic\")"))
           (t (loop for path in (split-string cmake-prefix-path ":")
                  if (file-exists-p (format "%s/.catkin" path))
                  do (setenv catkin--WS path)
@@ -85,8 +99,10 @@ and chooses the first one as WS which contains a '.catkin' file"
     )
   )
 
-(defun catkin-config-print ()
+;;;###autoload
+(defun catkin-config-show ()
   "Prints the current configuration the catkin workspace at $EMACS_CATKIN_WS to a new buffer called *catkin-config*"
+  (catkin--setup)
   (switch-to-buffer-other-window "*catkin-config*")
   (erase-buffer)
   ; Pipe stderr to null to supress "could not determine width" warning
@@ -359,6 +375,7 @@ After you have executed an action the helm dialog will show again (execpt for Bu
 To quit it just press ESC.
    "
   (interactive)
+  (catkin--setup)
   (helm :buffer "* Catkin *"
         :sources '(catkin--config-cmake-sources
                    catkin--config-make-sources
@@ -409,6 +426,7 @@ To quit it just press ESC.
 (defun catkin-open-file-in (pkg file)
   "Opens the file at `$(rospack find pkg)/fil'. FILE can be a relative path to PKG."
   (interactive)
+  (catkin--setup)
   (find-file (format "%s/%s" (catkin--util-absolute-path-of pkg) file))
   )
 
@@ -429,6 +447,7 @@ To quit it just press ESC.
 (defun catkin-open-pkg-dired (pkg)
   "Opens the absolute path of PKG in `dired'."
   (interactive)
+  (catkin--setup)
   (dired (catkin--util-absolute-path-of pkg))
   )
 
@@ -438,6 +457,7 @@ To quit it just press ESC.
 packages to build in the current workspace. `C-SPC' will enable
 multiple selections while `M-a' selects all packages."
   (interactive)
+  (catkin--setup)
   (helm :buffer "* Catkin Build *"
         :sources (helm-build-sync-source "Packages"
                    :candidates (catkin-list)
@@ -450,6 +470,20 @@ multiple selections while `M-a' selects all packages."
                    )
         )
   )
+
+(define-minor-mode global-catkin-mode
+  "A minor mode that enable the keybindings for catkin"
+  :init-value t
+  :lighter "Catkin"
+  :keymap (let ((keymap (make-sparse-keymap)))
+            (define-key keymap (kbd "C-x c c") 'catkin)
+            (define-key keymap (kbd "C-x c b") 'catkin-build)
+            (define-key keymap (kbd "C-x c l") 'catkin-config-show)
+            (define-key keymap (kbd "C-x c w") 'catkin-set-workspace)
+            keymap)
+  :global t
+  )
+
 
 (provide 'catkin)
 

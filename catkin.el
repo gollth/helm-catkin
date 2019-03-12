@@ -4,6 +4,13 @@
 
 ;; Author:  gollth
 ;; Keywords: tools, ROS
+;; Package-Requires: ((helm) (xterm-color))
+
+;;; Commentary:
+
+;; catkin is a package providing an interface to catkin-tools `https://catkin-tools.readthedocs.io/en/latest/'.
+;; It integrates with `helm' such that the config is shown in a helm dialog and can be customized
+;; with actions. The colored build output is put in a dedicated buffer.
 
 ;;; Code:
 
@@ -325,6 +332,7 @@ not blacklisted and are requested to be removed don't provoce an error and are j
     )
   )
 
+;;;###autoload
 (defun catkin ()
   "Opens a helm query which shows the current config for the catkin workspace at $EMACS_CATKIN_WS.
 It combines the different arguments into helm sections:
@@ -375,7 +383,6 @@ To quit it just press ESC.
     )
   )
 
-
 (defun catkin-build-package (&optional pkgs)
   "Build the catkin workspace at $EMACS_CATKIN_WS after sourcing it's ws. If PKGS is non-nil, only these packages are built, otherwise all packages in the ws are build"
   (let* ((packages (catkin--util-format-list pkgs " "))
@@ -425,6 +432,7 @@ To quit it just press ESC.
   (dired (catkin--util-absolute-path-of pkg))
   )
 
+;;;###autoload
 (defun catkin-build ()
   "Prompts the user via a helm dialog to select one or more
 packages to build in the current workspace. `C-SPC' will enable
@@ -443,14 +451,6 @@ multiple selections while `M-a' selects all packages."
         )
   )
 
-
-;; Tests
-(catkin-set-ws "~/ros/util")
-(catkin-config-cmake-args-clear)
-(catkin-config-cmake-args-set '("-DCMAKE_BUILD_TYPE=Release"))
-(catkin-config-cmake-args-add '("-DCHELLO" "-DCFOO=bar"))
-(catkin-config-cmake-args-remove '("-DCHELLO" "BLUB"))
-(catkin-config-make-args-set '("-j4"))
-(catkin-config)
+(provide 'catkin)
 
 ;;; catkin.el ends here

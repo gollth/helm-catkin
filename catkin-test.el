@@ -66,6 +66,11 @@
     )
   )
 
+(ert-deftest test-catkin--parse-config-with-unknown-key-returns-nil ()
+  "Test if an unknown keyword is returned as nil and does not raise an error"
+  (with-mock
+   (mock (getenv "EMACS_CATKIN_WS") => path)
+   (should-not (catkin--parse-config "blubiblub"))
     )
   )
 

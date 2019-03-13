@@ -81,7 +81,7 @@ If SEPARATOR is nil, the newline character is used to split stdout."
 It sets the environment variable EMACS_CATKIN_WS to the value of WS. When WS is nil
 similar to `roscd' this function looks in all values within $CMAKE_PREFIX_PATH
 and chooses the first one as WS which contains a '.catkin' file"
-  (let (cmake-prefix-path (getenv "CMAKE_PREFIX_PATH"))
+  (let ((cmake-prefix-path (getenv "CMAKE_PREFIX_PATH")))
     (cond (ws (setenv catkin--WS ws))
           ((null cmake-prefix-path)
            (error "Cannot automatically set catkin workspace because $CMAKE_PREFIX_PATH is not set.
@@ -98,8 +98,10 @@ Check the value of CMAKE_PREFIX_PATH with `setenv' and/or call `catkin--set-ws' 
     )
   )
 
+;;;###autoload
 (defun catkin-init ()
   "(Re-)Initializes a catkin workspace at $EMACS_CATKIN_WS"
+  (interactive)
   (let ((ws (getenv catkin--WS)))
     (unless (file-exists-p ws)
       (unless (y-or-n-p (format "Path %s does not exist. Create?" ws))

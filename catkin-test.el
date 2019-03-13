@@ -71,6 +71,31 @@
   (with-mock
    (mock (getenv "EMACS_CATKIN_WS") => path)
    (should-not (catkin--parse-config "blubiblub"))
+   )
+  )
+
+(ert-deftest test-catkin--set-ws-without-args-looks-into-cmake-prefix-path ()
+  "Calling catkin--set-ws without explicit path argument makes the function read the value from CMAKE_PREFIX_PATH"
+  (with-mock
+    (mock (getenv "CMAKE_PREFIX_PATH") => path :times 1)
+    (mock (setenv "EMACS_CATKIN_WS" path) :times 1)
+    (should-not (catkin--set-ws))  ;; returns nil on success
+    )
+  )
+
+(ert-deftest test-catkin--set-ws-without-args-and-without-cmake-prefix-path-raises ()
+  "If no CMAKE_PREFIX_PATH is set and automatic catkin extraction is requested"
+  (with-mock
+    (mock (getenv "CMAKE_PREFIX_PATH"))  ;; returns nil
+    (should-error (catkin--set-ws))
+    )
+  )
+
+(ert-deftest test-catkin--set-ws-with-args-sets-the-env ()
+  "Calling catkin--set-ws with an explicit path will set the env accordingly."
+  (with-mock
+    (mock (setenv "EMACS_CATKIN_WS" "/test/path") :times 1)
+    (catkin--set-ws "/test/path")
     )
   )
 

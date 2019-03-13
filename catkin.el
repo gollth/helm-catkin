@@ -18,6 +18,27 @@
 (require 'xterm-color)
 
 (defconst catkin--WS "EMACS_CATKIN_WS")
+(defun catkin--parse-config (key)
+  (let ((path (format "%s/.catkin_tools/profiles/default/config.yaml" (getenv catkin--WS))))
+    (if (null (file-exists-p path)) (error "Catkin workspace seems uninitialized. Use `(catkin-init)' to do that now"))
+
+    (with-temp-buffer
+      (insert-file-contents path)
+      (goto-char (point-min))
+      (re-search-forward (format "^%s: *\\(\\(\n- .*$\\)+\\|\\(.*$\\)\\)" key))
+      (let ((match (match-string 1)))
+        (with-temp-buffer
+          (insert match)
+          (cond ((string= (buffer-string) "[]") '())
+                ((= 1 (count-lines (point-min) (point-max))) (buffer-string))
+                (t (split-string (replace-regexp-in-string "^- \\|^\\W*$" "" (buffer-string)) "\n"))
+                )
+          )
+        )
+      )
+    )
+  )
+
 (defun catkin--setup ()
   "Calls `catkin--set-ws' without arguments if $EMACS_CATKIN_WS is not set."
   (if (null (getenv catkin--WS)) (catkin--set-ws))

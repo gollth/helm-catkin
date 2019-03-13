@@ -1,4 +1,5 @@
 (load-file "catkin.el")
+(require 'el-mock)
 
 
 (ert-deftest test-catkin--util-format-list-returns-string ()
@@ -26,6 +27,37 @@
          (data (catkin--util-command-to-list test-command "-")))
     (should (sequencep data))
     (should (equal data expected-data))
+    )
+  )
+
+(defconst path (file-name-directory (or load-file-name buffer-file-name)))
+(ert-deftest test-catkin--parse-config-raises-without-initialized-workspace ()
+  (with-mock
+    (mock (getenv catkin--WS) => (format %s "path/which/does/never/exist"))
+    (should-error (catkin--parse-config nil))
+    )
+  )
+
+(ert-deftest test-catkin--parse-config-with-simple-keywords ()
+  (with-mock
+    (mock (getenv catkin--WS) => path)
+    (should (string= "false" (catkin--parse-config "install")))
+    )
+  )
+(ert-deftest test-catkin--parse-config-with-list-property ()
+  (with-mock
+    (mock (getenv catkin--WS) => path)
+    (should (equal '("-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
+                   (catkin--parse-config "cmake_args")
+                   )
+            )
+    )
+  )
+(ert-deftest test-catkin--parse-config-with-empty-list ()
+  (with-mock
+    (mock (getenv catkin--WS) => path)
+    (should (equal '() (catkin--parse-config "blacklist"))
+            )
     )
   )
 

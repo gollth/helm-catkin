@@ -31,33 +31,41 @@
   )
 
 (defconst path (file-name-directory (or load-file-name buffer-file-name)))
+(defconst npath (format "%s/path/which/does/not/exist" path))
+
 (ert-deftest test-catkin--parse-config-raises-without-initialized-workspace ()
+  "Test if the parse-config command throws an error when the ws is not initialized"
   (with-mock
-    (mock (getenv catkin--WS) => (format %s "path/which/does/never/exist"))
+    (mock (getenv "EMACS_CATKIN_WS") => npath)
     (should-error (catkin--parse-config nil))
     )
   )
 
-(ert-deftest test-catkin--parse-config-with-simple-keywords ()
+(ert-deftest test-catkin--parse-config-key-with-simple-value ()
+  "Test if a keyword with one value like 'null' or 'false' is returned as string"
   (with-mock
-    (mock (getenv catkin--WS) => path)
+    (mock (getenv "EMACS_CATKIN_WS") => path)
     (should (string= "false" (catkin--parse-config "install")))
     )
   )
-(ert-deftest test-catkin--parse-config-with-list-property ()
+(ert-deftest test-catkin--parse-config-key-with-list-value ()
+  "Test if a keyword with multiple values like 'cmake_args' are returned as list of strings"
   (with-mock
-    (mock (getenv catkin--WS) => path)
+    (mock (getenv "EMACS_CATKIN_WS") => path)
     (should (equal '("-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
                    (catkin--parse-config "cmake_args")
                    )
             )
     )
   )
-(ert-deftest test-catkin--parse-config-with-empty-list ()
+(ert-deftest test-catkin--parse-config--key-with-empty-list-value ()
+  "Test if a keyword with an empty list '[]' (yaml syntax) is returned as empty list '() (lisp syntax)"
   (with-mock
-    (mock (getenv catkin--WS) => path)
-    (should (equal '() (catkin--parse-config "blacklist"))
-            )
+    (mock (getenv "EMACS_CATKIN_WS") => path)
+    (should-not (catkin--parse-config "blacklist"))
+    )
+  )
+
     )
   )
 

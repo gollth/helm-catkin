@@ -62,7 +62,7 @@
   "Test if a keyword with an empty list '[]' (yaml syntax) is returned as empty list '() (lisp syntax)"
   (with-mock
     (mock (getenv "EMACS_CATKIN_WS") => path)
-    (should-not (catkin--parse-config "blacklist"))
+    (should-not (catkin--parse-config "job_args"))
     )
   )
 
@@ -96,6 +96,45 @@
   (with-mock
     (mock (setenv "EMACS_CATKIN_WS" "/test/path") :times 1)
     (catkin--set-ws "/test/path")
+    )
+  )
+
+(ert-deftest test-catkin-config-cmake-args-are-correct ()
+  "Calling catkin-config-cmake-args returns the values from the config.yaml file"
+  (with-mock
+    (mock (getenv "EMACS_CATKIN_WS") => path)
+    (should (equal (catkin-config-cmake-args) '("-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")))
+    )
+  )
+(ert-deftest test-catkin-config-make-args-are-correct ()
+  "Calling catkin-config-make-args returns the values from the config.yaml file"
+  (with-mock
+    (mock (getenv "EMACS_CATKIN_WS") => path)
+    (should (equal (catkin-config-make-args) '("-j4")))
+    )
+  )
+
+(ert-deftest test-catkin-config-catkin-make-args-are-correct ()
+  "Calling catkin-config-catkin-make-args returns the values from the config.yaml file"
+  (with-mock
+    (mock (getenv "EMACS_CATKIN_WS") => path)
+    (should (equal (catkin-config-catkin-make-args) '()))
+    )
+  )
+
+(ert-deftest test-catkin-config-blacklist-is-correct ()
+  "Calling catkin-config-blacklist returns the packages from the config.yaml file"
+  (with-mock
+    (mock (getenv "EMACS_CATKIN_WS") => path)
+    (should (equal (catkin-config-blacklist) '("pkg1" "pkg2" "pkg3")))
+    )
+  )
+
+(ert-deftest test-catkin-config-whitelist-is-correct ()
+  "Calling catkin-config-whitelist returns the packages from the config.yaml file"
+  (with-mock
+    (mock (getenv "EMACS_CATKIN_WS") => path)
+    (should (equal (catkin-config-whitelist)'()))
     )
   )
 

@@ -4,7 +4,7 @@
 
 ;; Author:  gollth
 ;; Keywords: tools, ROS
-;; Package-Requires: ((helm) (xterm-color))
+;; Package-Requires: (helm xterm-color el-mock)
 
 ;;; Commentary:
 
@@ -178,7 +178,7 @@ arguments of a certain type e.g. all cmake-args or all whitelist pkgs."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun catkin-config-cmake-args ()
   "Returns a list of all currenty set cmake args for the workspace at $EMACS_CATKIN_WS"
-  (catkin--config-args-find "Additional CMake Args:\s*")
+  (catkin--parse-config "cmake_args")
   )
 (defalias 'catkin-config-cmake-args-clear (apply-partially 'catkin--config-args "--no-cmake-args")
   "Removes all cmake args for the current workspace at $EMACS_CATKIN_WS"
@@ -225,7 +225,7 @@ minibuffer is autofilled with ARG and the new entered value will be returned."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun catkin-config-make-args ()
   "Returns a list of all currenty set make args for the workspace at $EMACS_CATKIN_WS"
-  (catkin--config-args-find "Additional Make Args:\s*")
+  (catkin--parse-config "make_args")
   )
 (defalias 'catkin-config-make-args-clear (apply-partially 'catkin--config-args "--no-make-args")
   "Removes all make args for the current workspace at $EMACS_CATKIN_WS"
@@ -273,7 +273,7 @@ minibuffer is autofilled with ARG and the new entered value will be returned."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun catkin-config-catkin-make-args ()
   "Returns a list of all currenty set catkin-make args for the workspace at $EMACS_CATKIN_WS"
-  (catkin--config-args-find "Additional catkin Make Args:\s*" ", ")
+  (catkin--parse-config "catkin_make_args")
   )
 (defalias 'catkin-config-catkin-make-args-clear (apply-partially 'catkin--config-args "--no-catkin-make-args")
   "Removes all catkin-make args for the current workspace at $EMACS_CATKIN_WS"
@@ -324,7 +324,7 @@ minibuffer is autofilled with ARG and the new entered value will be returned."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun catkin-config-whitelist ()
   "Returns a list of all currenty whitelisted packages for the workspace at $EMACS_CATKIN_WS"
-  (catkin--config-args-find "Whitelisted Packages:\s*")
+  (catkin--parse-config "whitelist")
   )
 (defalias 'catkin-config-whitelist-add (apply-partially 'catkin--config-args "--append-args --whitelist")
   "Marks a list of packages to be whitelisted for the current workspace at $EMACS_CATKIN_WS."
@@ -344,7 +344,7 @@ are just ignored."
 
 (defun catkin-config-blacklist ()
   "Returns a list of all currenty blacklisted packages for the workspace at $EMACS_CATKIN_WS"
-  (catkin--config-args-find "Blacklisted Packages:\s*")
+  (catkin--parse-config "blacklist")
   )
 (defalias 'catkin-config-blacklist-add (apply-partially 'catkin--config-args "--append-args --blacklist")
   "Marks a list of packages to be blacklisted for the current workspace at $EMACS_CATKIN_WS."

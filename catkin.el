@@ -136,6 +136,7 @@ Check the value of CMAKE_PREFIX_PATH with `setenv' and/or call `catkin--set-ws' 
   (other-window 1)
   )
 
+;;;###autoload
 (defun catkin-config-open ()
   "Opens the config file for the catkin profile for the workspace at $EMACS_CATKIN_WS"
   (find-file (format "%s/.catkin_tools/profiles/default/config.yaml" (getenv catkin--WS)))
@@ -520,7 +521,6 @@ multiple selections while `M-a' selects all packages."
 (define-minor-mode global-catkin-mode
   "A minor mode that enable the keybindings for catkin"
   :init-value t
-  :lighter "Catkin"
   :keymap (let ((keymap (make-sparse-keymap)))
             (define-key keymap (kbd "C-x c c") 'catkin)
             (define-key keymap (kbd "C-x c b") 'catkin-build)

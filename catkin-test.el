@@ -7,21 +7,27 @@
 (defconst path (file-name-directory (or load-file-name buffer-file-name)))
 (defconst npath (format "%s/path/which/does/not/exist" path))
 
+(defun test-helper-non-empty (s)
+  "Returns nil if S is empty, otherwise returns S."
+  (if (string= s "") nil s)
+  )
 
 (defun test-helper-diff (filters)
   "Compares the 'config.yaml' file with the 'config.yaml.bak' file and `grep's for a custom FILTERS.
 The FILTERS are anded in the grep search and the order is important! Note that the `diff' command
-first outputs removes (\"< ...\") and then additions (\"> ... \"). Returns the resulting matched string.
-Can be used to test if a certain change was made between the two files:
+first outputs removes (\"< ...\") and then additions (\"> ... \"). Returns the resulting matched string
+of nil if no match. Can be used to test if a certain change was made between the two files:
 (test-helper-diff '(\"> - NEW_CMAKE_ARG\"))   ;; a new cmake arg has been added to config.yaml
 (test-helper-diff '(\"< extend_path: null\")) ;; the extend_path: null was removed from config.yaml
 (test-helper-diff '(\"< args: []\"
                     \"> - -Value1\"))         ;; 'args' changed from empty list to one element
 "
-  (shell-command-to-string
-   (format "diff %s/.catkin_tools/profiles/default/config.yaml %s/.catkin_tools/profiles/default/config.yaml.bak | grep -E '%s' | grep -vE '^[0-9-].*$'"
-           path path (catkin--util-format-list filters ".*")))
+(test-helper-non-empty
+ (shell-command-to-string
+  (format "diff %s/.catkin_tools/profiles/default/config.yaml.bak %s/.catkin_tools/profiles/default/config.yaml | grep -vsE '^[0-9-].*$' | grep -soF '%s' "
+          path path (catkin--util-format-list filters "\n")))
   )
+)
 
 (defun test-helper-backup ()
   (copy-file (format "%s/.catkin_tools/profiles/default/config.yaml" path) (format "%s/.catkin_tools/profiles/default/config.yaml.bak" path) t)
@@ -91,7 +97,7 @@ Can be used to test if a certain change was made between the two files:
   "Test if a keyword with an empty list '[]' (yaml syntax) is returned as empty list '() (lisp syntax)"
   (with-mock
     (mock (getenv catkin--WS) => path)
-    (should-not (catkin--parse-config "job_args"))
+    (should-not (catkin--parse-config "whitelist"))  ;; in config whitelist is explicitly kept emtpy for testing
     )
   )
 
@@ -298,7 +304,7 @@ Make args are a bit special, because they can be in job_args or make_args key"
     (unwind-protect
         (progn
           (catkin-config-catkin-make-args-remove '("unknown catkin-make-arg"))
-          (should (string= (test-helper-diff '("")) "")))   ;; no change
+          (should-not (test-helper-diff '(""))))   ;; no change
       (test-helper-unbackup))
     )
   )
@@ -310,7 +316,7 @@ Make args are a bit special, because they can be in job_args or make_args key"
     (unwind-protect
         (progn
           (catkin-config-catkin-make-args-clear)
-          (should (test-helper-diff '("< jobs_args: []")))   ;; clears jobs_args
+          (should (test-helper-diff '("> jobs_args: []")))   ;; clears jobs_args
           )
       (test-helper-unbackup))
     )
@@ -323,11 +329,12 @@ Make args are a bit special, because they can be in job_args or make_args key"
     (unwind-protect
         (progn
           (catkin-config-catkin-make-args-set '("Value1" "Value2"))
-          (should (test-helper-diff '("< catkin_make_args: \\[\\]"
+          (should (test-helper-diff '("< catkin_make_args: []"
+                                      "> catkin_make_args:"
                                       "> - Value1"
                                       "> - Value2")))
           )
-      (test-helper-unbackup))
+     (test-helper-unbackup))
     )
   )
 

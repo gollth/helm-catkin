@@ -1,6 +1,38 @@
 (load-file "catkin.el")
 (require 'el-mock)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Helper functions for Testing ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defconst path (file-name-directory (or load-file-name buffer-file-name)))
+(defconst npath (format "%s/path/which/does/not/exist" path))
+
+
+(defun test-helper-diff (filters)
+  "Compares the 'config.yaml' file with the 'config.yaml.bak' file and `grep's for a custom FILTERS.
+The FILTERS are anded in the grep search and the order is important! Note that the `diff' command
+first outputs removes (\"< ...\") and then additions (\"> ... \"). Returns the resulting matched string.
+Can be used to test if a certain change was made between the two files:
+(test-helper-diff '(\"> - NEW_CMAKE_ARG\"))   ;; a new cmake arg has been added to config.yaml
+(test-helper-diff '(\"< extend_path: null\")) ;; the extend_path: null was removed from config.yaml
+(test-helper-diff '(\"< args: []\"
+                    \"> - -Value1\"))         ;; 'args' changed from empty list to one element
+"
+  (shell-command-to-string
+   (format "diff %s/.catkin_tools/profiles/default/config.yaml %s/.catkin_tools/profiles/default/config.yaml.bak | tail -n +2 | grep -E '%s'"
+           path path (catkin--util-format-list filters ".*")))
+  )
+
+(defun test-helper-backup ()
+  (copy-file (format "%s/.catkin_tools/profiles/default/config.yaml" path) (format "%s/.catkin_tools/profiles/default/config.yaml.bak" path) t)
+  )
+
+(defun test-helper-unbackup ()
+  (copy-file (format "%s/.catkin_tools/profiles/default/config.yaml.bak" path) (format "%s/.catkin_tools/profiles/default/config.yaml" path) t)
+  (delete-file (format "%s/.catkin_tools/profiles/default/config.yaml.bak" path))
+  )
+
+
 
 (ert-deftest test-catkin--util-format-list-returns-string ()
   "Tests if the catkin--util-format-list function returns a string for given inputs"
@@ -29,9 +61,6 @@
     (should (equal data expected-data))
     )
   )
-
-(defconst path (file-name-directory (or load-file-name buffer-file-name)))
-(defconst npath (format "%s/path/which/does/not/exist" path))
 
 (ert-deftest test-catkin--parse-config-raises-without-initialized-workspace ()
   "Test if the parse-config command throws an error when the ws is not initialized"
@@ -107,6 +136,7 @@
     )
   )
 
+;; CMake Arg Test ;;
 (ert-deftest test-catkin-config-cmake-args-are-correct ()
   "Calling catkin-config-cmake-args returns the values from the config.yaml file"
   (with-mock
@@ -114,26 +144,65 @@
     (should (equal (catkin-config-cmake-args) '("-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")))
     )
   )
-
-(defun test-helper-diff (filter)
-  "Compares the 'config.yaml' file with the 'config.yaml.bak' file and `grep's for a custom FILTER.
-Returns the resulting string. Can be used to test if a certain change was made between the two files:
-(test-help-diff \"> - NEW_CMAKE_ARG\")   ;; a new cmake arg has been added to config.yaml
-(test-help-diff \"< extend_path: null\") ;; the extend_path: null was removed from config.yaml
-"
-  (shell-command-to-string
-   (format "diff %s/.catkin_tools/profiles/default/config.yaml %s/.catkin_tools/profiles/default/config.yaml.bak | tail -n +2 | grep '%s'"
-           path path filter))
+(ert-deftest test-catkin-config-cmake-args-add ()
+  "Calling catkin-config-cmake-args-add will put an entry into the config.yaml file"
+  (with-mock
+    (mock (getenv catkin--WS) => path)
+    (test-helper-backup)
+    (unwind-protect   ;; make sure the file is restored if an error occurs
+        (progn
+          (catkin-config-cmake-args-add (list "New_CMake_Arg"))
+          (should (test-helper-diff '("> - New_CMake_Arg")))
+          )
+      (test-helper-unbackup))
+    )
+  )
+(ert-deftest test-catkin-config-cmake-args-remove ()
+  "Calling catkin-config-cmake-args-remove will delete an entry from the config.yaml file"
+  (with-mock
+    (mock (getenv catkin--WS) => path)
+    (test-helper-backup)
+    (unwind-protect
+        (progn
+          (catkin-config-cmake-args-remove '("-DCMAKE_BUILD_TYPE=Release"))
+          (should (test-helper-diff '("< - -DCMAKE_BUILD_TYPE=Release"))))
+      (test-helper-unbackup))
+    )
+  )
+(ert-deftest test-catkin-config-cmake-args-clear ()
+  "Calling catkin-config-cmake-args-clear will remove all entries from the config.yaml file"
+  (with-mock
+    (mock (getenv catkin--WS) => path)
+    (test-helper-backup)
+    (unwind-protect
+        (progn
+          (catkin-config-cmake-args-clear)
+          ;; The two cmake ares are now missing and a new line with : [] exists
+          (should (test-helper-diff '("< - -DCMAKE_BUILD_TYPE=Release"
+                                      "< - -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+                                      "> cmake_args: []"
+                                      )))
+          )
+      (test-helper-unbackup))
+    )
+  )
+(ert-deftest test-catkin-config-cmake-args-set ()
+  "Calling catkin-config-cmake-args-set will set the list regardless of its previous value"
+  (with-mock
+    (mock (getenv catkin--WS) => path)
+    (test-helper-backup)
+    (unwind-protect
+        (progn
+          (catkin-config-cmake-args-set '("Value1" "Value2"))
+          (should (test-helper-diff '("< - -DCMAKE_BUILD_TYPE=Release"
+                                      "< - -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+                                      "> - Value1"
+                                      "> - Value2")))
+          )
+      (test-helper-unbackup))
+    )
   )
 
-(defun test-helper-backup ()
-  (copy-file (format "%s/.catkin_tools/profiles/default/config.yaml" path) (format "%s/.catkin_tools/profiles/default/config.yaml.bak" path) t)
-  )
-
-(defun test-helper-unbackup ()
-  (copy-file (format "%s/.catkin_tools/profiles/default/config.yaml.bak" path) (format "%s/.catkin_tools/profiles/default/config.yaml" path) t)
-  (delete-file (format "%s/.catkin_tools/profiles/default/config.yaml.bak" path))
-  )
 (ert-deftest test-catkin-config-make-args-are-correct ()
   "Calling catkin-config-make-args returns the values from the config.yaml file"
   (with-mock

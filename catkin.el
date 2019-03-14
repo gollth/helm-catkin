@@ -147,15 +147,21 @@ The ARGS are string joined with spaces and applied after the OPERATION. This fun
 can be used to set args of a certain type like so:
 
 (catkin--config-args \"--cmake-args\" '(\"-DCMAKE_ARG1=foo\" \"-DCMAKE_ARG2=bar\"))
-(catkin--config-args \"--no-make-args\")"
+(catkin--config-args \"--no-make-args\")
+"
+  (unless (getenv catkin--WS) (error (format "Catkin workspace at $%s not set. Have you called `catkin-set-workspace'?" catkin--WS)))
   (let ((arg-string (catkin--util-format-list args " ")))
-    (substring
-     (call-process-shell-command
-      (format "catkin config --workspace %s %s %s" (getenv catkin--WS) operation arg-string)
+    (ignore-errors
+      (substring
+       (call-process-shell-command
+        (format "catkin config --workspace %s %s %s" (getenv catkin--WS) operation arg-string)
+        )
+       0 -1)
       )
-     0 -1)
-   )
+    )
   )
+
+
 (defun catkin--config-args-find (filter &optional sep)
   "Calls 'catkin config' and applies the FILTER to the output. After that
 the resulting string is split at SEP into a list. If SEP is nil the
@@ -186,7 +192,6 @@ arguments of a certain type e.g. all cmake-args or all whitelist pkgs."
 (defalias 'catkin-config-cmake-args-set (apply-partially 'catkin--config-args "--cmake-args")
   "Sets a list of cmake args for the current workspace at $EMACS_CATKIN_WS. Passing an empty list to ARGS will clear all currently set args."
   )
-
 (defalias 'catkin-config-cmake-args-add (apply-partially 'catkin--config-args "--append-args --cmake-args")
   "Adds a list of cmake args to the existing set of cmake args for the current workspace at $EMACS_CATKIN_WS."
   )

@@ -231,7 +231,7 @@ minibuffer is autofilled with ARG and the new entered value will be returned."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun catkin-config-make-args ()
   "Returns a list of all currenty set make args for the workspace at $EMACS_CATKIN_WS"
-  (catkin--parse-config "make_args")
+  (append (catkin--parse-config "make_args") (catkin--parse-config "jobs_args"))
   )
 (defalias 'catkin-config-make-args-clear (apply-partially 'catkin--config-args "--no-make-args")
   "Removes all make args for the current workspace at $EMACS_CATKIN_WS"

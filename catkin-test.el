@@ -19,7 +19,7 @@ Can be used to test if a certain change was made between the two files:
                     \"> - -Value1\"))         ;; 'args' changed from empty list to one element
 "
   (shell-command-to-string
-   (format "diff %s/.catkin_tools/profiles/default/config.yaml %s/.catkin_tools/profiles/default/config.yaml.bak | tail -n +2 | grep -E '%s'"
+   (format "diff %s/.catkin_tools/profiles/default/config.yaml %s/.catkin_tools/profiles/default/config.yaml.bak | grep -E '%s' | grep -vE '^[0-9-].*$'"
            path path (catkin--util-format-list filters ".*")))
   )
 
@@ -205,10 +205,11 @@ Can be used to test if a certain change was made between the two files:
 
 ;; Make args Tests ;;
 (ert-deftest test-catkin-config-make-args-are-correct ()
-  "Calling catkin-config-make-args returns the values from the config.yaml file"
+  "Calling catkin-config-make-args returns the values from the config.yaml file.
+Make args are a bit special, because they can be in job_args or make_args key"
   (with-mock
     (mock (getenv catkin--WS) => path)
-    (should (equal (catkin-config-make-args) '("-j4")))
+    (should (equal (catkin-config-make-args) '("-some_make_arg" "-j4")))
     )
   )
 (ert-deftest test-catkin-config-make-args-add ()
@@ -244,9 +245,9 @@ Can be used to test if a certain change was made between the two files:
     (unwind-protect
         (progn
           (catkin-config-make-args-clear)
-          ;; The two make ares are now missing and a new line with : [] exists
+          ;; The two make arg lists are now missing and new lines with : [] exists
           (should (test-helper-diff '("< - -j4"
-                                      "> make_args: []"
+                                      "< - -some_make_arg"
                                       )))
           )
       (test-helper-unbackup))
@@ -309,7 +310,7 @@ Can be used to test if a certain change was made between the two files:
     (unwind-protect
         (progn
           (catkin-config-catkin-make-args-clear)
-          (should (string= (test-helper-diff '("")) ""))   ;; no change
+          (should (test-helper-diff '("< jobs_args: []")))   ;; clears jobs_args
           )
       (test-helper-unbackup))
     )

@@ -365,6 +365,21 @@ not blacklisted and are requested to be removed don't provoce an error and are j
     :action '(("Un-Blacklist" . (lambda (_) (catkin-config-blacklist-remove (helm-marked-candidates)) (catkin))))
     )
   )
+
+(defvar catkin--config-new-sources
+  (helm-build-sync-source "[New]"
+    :candidates '("CMake Arg" "Make Arg" "Catkin Make Arg")
+    :action '(("Create New Arg" . (lambda (name)
+                                    (cond ((string= name "CMake Arg") (catkin-config-cmake-new ""))
+                                          ((string= name "Make Arg") (catkin-config-make-new ""))
+                                          ((string= name "Catkin Make Arg") (catkin-config-catkin-make-new ""))
+                                          )
+                                    (catkin)
+                                    )
+               ))
+    )
+  )
+
 (defvar catkin--config-packages-sources
   (helm-build-sync-source "Packages"
     :candidates 'catkin-list
@@ -413,6 +428,7 @@ To quit it just press ESC.
                    catkin--config-whitelist-sources
                    catkin--config-blacklist-sources
                    catkin--config-packages-sources
+                   catkin--config-new-sources
                    )
         )
   )

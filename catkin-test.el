@@ -268,6 +268,68 @@ Can be used to test if a certain change was made between the two files:
     )
   )
 
+;; Catkin-Make args Tests ;;
+(ert-deftest test-catkin-config-catkin-make-args-are-correct ()
+  "Calling catkin-config-catkin-make-args returns the values from the config.yaml file"
+  (with-mock
+    (mock (getenv catkin--WS) => path)
+    (should (equal (catkin-config-catkin-make-args) '()))
+    )
+  )
+(ert-deftest test-catkin-config-catkin-make-args-add ()
+  "Calling catkin-config-catkin-make-args-add will put an entry into the config.yaml file"
+  (with-mock
+    (mock (getenv catkin--WS) => path)
+    (test-helper-backup)
+    (unwind-protect   ;; make sure the file is restored if an error occurs
+        (progn
+          (catkin-config-catkin-make-args-add (list "New_Catkin_Make_Arg"))
+          (should (test-helper-diff '("> - New_Catkin_Make_Arg")))
+          )
+      (test-helper-unbackup))
+    )
+  )
+(ert-deftest test-catkin-config-catkin-make-args-remove ()
+  "Calling catkin-config-catkin-make-args-remove will delete an entry from the config.yaml file"
+  (with-mock
+    (mock (getenv catkin--WS) => path)
+    (test-helper-backup)
+    (unwind-protect
+        (progn
+          (catkin-config-catkin-make-args-remove '("unknown catkin-make-arg"))
+          (should (string= (test-helper-diff '("")) "")))   ;; no change
+      (test-helper-unbackup))
+    )
+  )
+(ert-deftest test-catkin-config-catkin-make-args-clear ()
+  "Calling catkin-config-catkin-make-args-clear will remove all entries from the config.yaml file"
+  (with-mock
+    (mock (getenv catkin--WS) => path)
+    (test-helper-backup)
+    (unwind-protect
+        (progn
+          (catkin-config-catkin-make-args-clear)
+          (should (string= (test-helper-diff '("")) ""))   ;; no change
+          )
+      (test-helper-unbackup))
+    )
+  )
+(ert-deftest test-catkin-config-catkin-make-args-set ()
+  "Calling catkin-config-catkin-make-args-set will set the list regardless of its previous value"
+  (with-mock
+    (mock (getenv catkin--WS) => path)
+    (test-helper-backup)
+    (unwind-protect
+        (progn
+          (catkin-config-catkin-make-args-set '("Value1" "Value2"))
+          (should (test-helper-diff '("< catkin_make_args: \\[\\]"
+                                      "> - Value1"
+                                      "> - Value2")))
+          )
+      (test-helper-unbackup))
+    )
+  )
+
 (ert-deftest test-catkin-config-blacklist-is-correct ()
   "Calling catkin-config-blacklist returns the packages from the config.yaml file"
   (with-mock

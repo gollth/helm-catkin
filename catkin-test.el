@@ -203,6 +203,7 @@ Can be used to test if a certain change was made between the two files:
     )
   )
 
+;; Make args Tests ;;
 (ert-deftest test-catkin-config-make-args-are-correct ()
   "Calling catkin-config-make-args returns the values from the config.yaml file"
   (with-mock
@@ -210,12 +211,60 @@ Can be used to test if a certain change was made between the two files:
     (should (equal (catkin-config-make-args) '("-j4")))
     )
   )
-
-(ert-deftest test-catkin-config-catkin-make-args-are-correct ()
-  "Calling catkin-config-catkin-make-args returns the values from the config.yaml file"
+(ert-deftest test-catkin-config-make-args-add ()
+  "Calling catkin-config-make-args-add will put an entry into the config.yaml file"
   (with-mock
     (mock (getenv catkin--WS) => path)
-    (should (equal (catkin-config-catkin-make-args) '()))
+    (test-helper-backup)
+    (unwind-protect   ;; make sure the file is restored if an error occurs
+        (progn
+          (catkin-config-make-args-add (list "New_Make_Arg"))
+          (should (test-helper-diff '("> - New_Make_Arg")))
+          )
+      (test-helper-unbackup))
+    )
+  )
+(ert-deftest test-catkin-config-make-args-remove ()
+  "Calling catkin-config-make-args-remove will delete an entry from the config.yaml file"
+  (with-mock
+    (mock (getenv catkin--WS) => path)
+    (test-helper-backup)
+    (unwind-protect
+        (progn
+          (catkin-config-make-args-remove '("-j4"))
+          (should (test-helper-diff '("< - -j4"))))
+      (test-helper-unbackup))
+    )
+  )
+(ert-deftest test-catkin-config-make-args-clear ()
+  "Calling catkin-config-make-args-clear will remove all entries from the config.yaml file"
+  (with-mock
+    (mock (getenv catkin--WS) => path)
+    (test-helper-backup)
+    (unwind-protect
+        (progn
+          (catkin-config-make-args-clear)
+          ;; The two make ares are now missing and a new line with : [] exists
+          (should (test-helper-diff '("< - -j4"
+                                      "> make_args: []"
+                                      )))
+          )
+      (test-helper-unbackup))
+    )
+  )
+(ert-deftest test-catkin-config-make-args-set ()
+  "Calling catkin-config-make-args-set will set the list regardless of its previous value"
+  (with-mock
+    (mock (getenv catkin--WS) => path)
+    (test-helper-backup)
+    (unwind-protect
+        (progn
+          (catkin-config-make-args-set '("Value1" "Value2"))
+          (should (test-helper-diff '("< - -j4"
+                                      "> - Value1"
+                                      "> - Value2")))
+          )
+      (test-helper-unbackup))
     )
   )
 

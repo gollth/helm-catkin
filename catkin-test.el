@@ -99,12 +99,40 @@
     )
   )
 
+(ert-deftest test-catkin--config-args-raises-if-env-not-set ()
+  "Calling catkin--config-args-find without prior setting of the env will throw an error"
+  (with-mock
+    (mock (getenv catkin--WS) => nil)
+    (should-error (catkin--config-args ""))      ;; no operation just
+    )
+  )
+
 (ert-deftest test-catkin-config-cmake-args-are-correct ()
   "Calling catkin-config-cmake-args returns the values from the config.yaml file"
   (with-mock
     (mock (getenv catkin--WS) => path)
     (should (equal (catkin-config-cmake-args) '("-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")))
     )
+  )
+
+(defun test-helper-diff (filter)
+  "Compares the 'config.yaml' file with the 'config.yaml.bak' file and `grep's for a custom FILTER.
+Returns the resulting string. Can be used to test if a certain change was made between the two files:
+(test-help-diff \"> - NEW_CMAKE_ARG\")   ;; a new cmake arg has been added to config.yaml
+(test-help-diff \"< extend_path: null\") ;; the extend_path: null was removed from config.yaml
+"
+  (shell-command-to-string
+   (format "diff %s/.catkin_tools/profiles/default/config.yaml %s/.catkin_tools/profiles/default/config.yaml.bak | tail -n +2 | grep '%s'"
+           path path filter))
+  )
+
+(defun test-helper-backup ()
+  (copy-file (format "%s/.catkin_tools/profiles/default/config.yaml" path) (format "%s/.catkin_tools/profiles/default/config.yaml.bak" path) t)
+  )
+
+(defun test-helper-unbackup ()
+  (copy-file (format "%s/.catkin_tools/profiles/default/config.yaml.bak" path) (format "%s/.catkin_tools/profiles/default/config.yaml" path) t)
+  (delete-file (format "%s/.catkin_tools/profiles/default/config.yaml.bak" path))
   )
 (ert-deftest test-catkin-config-make-args-are-correct ()
   "Calling catkin-config-make-args returns the values from the config.yaml file"

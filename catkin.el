@@ -200,24 +200,6 @@ can be used to set args of a certain type like so:
     )
   )
 
-
-(defun catkin--config-args-find (filter &optional sep)
-  "Calls 'catkin config' and applies the FILTER to the output. After that
-the resulting string is split at SEP into a list. If SEP is nil the
-default split separator is space. This is useful to get a list of all
-arguments of a certain type e.g. all cmake-args or all whitelist pkgs."
-  (catkin--util-command-to-list
-   ;; due to https://github.com/catkin/catkin_tools/issues/519 catkin config without args
-   ;; clears make-args, thats why we use the -a switch to prevent that until this gets fixed
-   ;; Supress stderr for "Could not determine width of terminal" warnings
-   (format "catkin --no-color config -a --workspace %s 2> /dev/null | sed -n 's/%s//p'"
-           (getenv catkin--WS)
-           filter
-           )
-   (if sep sep " ")
-   )
-  )
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                  CMAKE Args                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

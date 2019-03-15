@@ -215,9 +215,10 @@ minibuffer is autofilled with ARG and the new entered value will be returned."
   (interactive)
   (catkin-config-cmake-args-add (list (helm-read-string "New CMake Arg: ")))
   )
-(defvar catkin--config-cmake-sources
+(defvar helm-source-catkin-config-cmake
   (helm-build-sync-source "CMake"
     :candidates 'catkin-config-cmake-args
+    :help-message 'helm-source-catkin-config-cmake-helm-message
     :action '(
               ("Change" . (lambda (x) (catkin-config-cmake-change x) (catkin)))
               ("Add" . (lambda (x) (catkin-config-cmake-new x) (catkin)))
@@ -263,9 +264,10 @@ minibuffer is autofilled with ARG and the new entered value will be returned."
   (interactive)
   (catkin-config-make-args-add (list (helm-read-string "New Make Arg: ")))
   )
-(defvar catkin--config-make-sources
+(defvar helm-source-catkin-config-make
   (helm-build-sync-source "Make"
     :candidates 'catkin-config-make-args
+    :help-message 'helm-source-catkin-config-make-helm-message
     :action '(
               ("Change" . (lambda (x) (catkin-config-make-change x) (catkin)))
               ("Add"    . (lambda (x) (catkin-config-make-new x) (catkin)))
@@ -314,9 +316,10 @@ minibuffer is autofilled with ARG and the new entered value will be returned."
   (catkin-config-catkin-make-args-add (list (helm-read-string "New Catkin-Make Arg: ")))
   )
 
-(defvar catkin--config-catkin-make-sources
+(defvar helm-source-catkin-config-catkin-make
   (helm-build-sync-source "Catkin-Make"
     :candidates 'catkin-config-catkin-make-args
+    :help-message 'helm-source-catkin-config-catkin-make-helm-message
     :action '(
               ("Change" . (lambda (x) (catkin-config-catkin-make-change x) (catkin)))
               ("Add" . (lambda (x) (catkin-config-catkin-make-new x) (catkin)))
@@ -341,10 +344,15 @@ the current workspace at $EMACS_CATKIN_WS. Packages which are currently
 not whitelisted and are requested to be removed don't provoce an error and
 are just ignored."
   )
-(defvar catkin--config-whitelist-sources
+(defvar helm-source-catkin-config-whitelist
   (helm-build-sync-source "Whitelist"
     :candidates 'catkin-config-whitelist
-    :action '(("Un-Whitelist" . (lambda (_) (catkin-config-whitelist-remove (helm-marked-candidates)) (catkin))))
+    :help-message 'helm-source-catkin-config-whitelist-helm-message
+    :action '(("Un-Whitelist" . (lambda (_) (catkin-config-whitelist-remove (helm-marked-candidates)) (catkin)))
+              ("Build" . (lambda (_) (catkin-build-package (helm-marked-candidates))))
+              ("Open Folder" . catkin-open-pkg-dired)
+              ("Open CMakeLists.txt" . (lambda (c) (catkin-open-pkg-cmakelist (helm-marked-candidates))))
+              ("Open package.xml" . (lambda (c) (catkin-open-pkg-package (helm-marked-candidates)))))
     )
   )
 
@@ -360,16 +368,22 @@ are just ignored."
 the current workspace at $EMACS_CATKIN_WS. Packages which are currently
 not blacklisted and are requested to be removed don't provoce an error and are just ignored."
   )
-(defvar catkin--config-blacklist-sources
+(defvar helm-source-catkin-config-blacklist
   (helm-build-sync-source "Blacklist"
     :candidates 'catkin-config-blacklist
-    :action '(("Un-Blacklist" . (lambda (_) (catkin-config-blacklist-remove (helm-marked-candidates)) (catkin))))
+    :help-message 'helm-source-catkin-config-blacklist-help-message
+    :action '(("Un-Blacklist" . (lambda (_) (catkin-config-blacklist-remove (helm-marked-candidates)) (catkin)))
+              ("Build" . (lambda (_) (catkin-build-package (helm-marked-candidates))))
+              ("Open Folder" . catkin-open-pkg-dired)
+              ("Open CMakeLists.txt" . (lambda (c) (catkin-open-pkg-cmakelist (helm-marked-candidates))))
+              ("Open package.xml" . (lambda (c) (catkin-open-pkg-package (helm-marked-candidates)))))
     )
   )
 
-(defvar catkin--config-new-sources
+(defvar helm-source-catkin-config-new
   (helm-build-sync-source "[New]"
     :candidates '("CMake Arg" "Make Arg" "Catkin Make Arg")
+    :help-message 'helm-source-catkin-config-new-helm-message
     :action '(("Create New Arg" . (lambda (name)
                                     (cond ((string= name "CMake Arg") (catkin-config-cmake-new ""))
                                           ((string= name "Make Arg") (catkin-config-make-new ""))
@@ -381,55 +395,117 @@ not blacklisted and are requested to be removed don't provoce an error and are j
     )
   )
 
-(defvar catkin--config-packages-sources
+(defvar helm-source-catkin-config-packages
   (helm-build-sync-source "Packages"
     :candidates 'catkin-list
+    :help-message 'helm-source-catkin-config-packages-helm-message
     :action '(("Build" . (lambda (c) (catkin-build-package (helm-marked-candidates))))
               ("Open Folder" . catkin-open-pkg-dired)
               ("Open CMakeLists.txt" . (lambda (c) (catkin-open-pkg-cmakelist (helm-marked-candidates))))
               ("Open package.xml" . (lambda (c) (catkin-open-pkg-package (helm-marked-candidates))))
               ("Blacklist" . (lambda (_) (catkin-config-blacklist-add (helm-marked-candidates)) (catkin)))
-              ("Whitelist" . (lambda (_) (catkin-config-whitelist-add (helm-marked-candidates)) (catkin)))
-              )
+              ("Whitelist" . (lambda (_) (catkin-config-whitelist-add (helm-marked-candidates)) (catkin))))
     )
   )
 
-;;;###autoload
-(defun catkin ()
-  "Opens a helm query which shows the current config for the catkin workspace at $EMACS_CATKIN_WS.
+(defvar helm-catkin-help-string
+  "* Catkin
+
+Opens a helm query which shows the current config for the catkin workspace at $EMACS_CATKIN_WS.
 It combines the different arguments into helm sections:
 
- - CMake Arguments          actions: change, add, Clear
- - Make Arguments           actions: change, add, Clear
- - Catkin Make Arguments    actions: change, add, Clear
- - Whitelisted Packages     actions: Un-Whitelist
- - Blacklisted Packages     actions: Un-Blacklist
- - All Packages             actions: Build, open folder, Open CMakeLists.txt, Open package.xml, Blacklist, Whitelist
+** Config Sections
+When you fire up the `catkin' command, you see a different sections listed below. If in one section
+no argument is set, the section is omitted. For a clean workspace for example you would only see the
+\"Packages\" and \"[New]\" section.
 
-Each section has a distinct set of actions for each item. Actions above starting with a capital
-letter accept multiple arguments from that section (which you can mark in helm via C-SPC). For
-example you can mark several CMake arguments and then choose the 'Clear' action (F3), which will
-clear all the marked arguments from the current catkin config. Actions not starting with captial
-letters will only affect the item in the list which is currently selected regardless of which
-other items are marked.
+ - [New]           Add a new argument to the config
+ - CMake:          The arguments passed to `cmake'
+ - Make:           The arguments passed to `make'
+ - Catkin Make:    The arguments passed to `catkin_make'
+ - Whitelist:      Which packages are whitelisted, i.e. are build exclusively
+ - Blacklisted:    Which packages are blacklisted, i.e. are skipped during build
+ - Packages:       The complete set of packages in the current workspace
 
-Alternatively you can mark all items in the current section with M-a, e.g. to build your entire
-workspace go to the package section and press M-a to mark all packages and press enter to choose
-the default action (F1) 'Build'.
 
-After you have executed an action the helm dialog will show again (execpt for Build and Open actions).
-To quit it just press ESC.
-   "
-  (interactive)
+** Actions
+Each section has a distinct set of actions for each item. Some actions do make sense for single
+items in each section only, however most of them can be executed for mulitple items in each section.
+The first action [F1] is always the default choice if you just press enter.
+
+*** [New]    (any of these actions will re-show the catkin dialog)
+***** [F1] CMake Arg           :: add a new cmake argument to the config
+***** [F2] Make Arg            :: add a new make argument to the config
+***** [F3] Catkin Make Arg     :: add a new catkin_make argument to the config
+*** CMake
+***** [F1] Change              :: change the value of that cmake argument
+***** [F2] Add                 :: add a new cmake argument
+***** [F3] Clear               :: remove that/those selected cmake argument(s)
+*** Make
+***** [F1] Change              :: change the value of that make argument
+***** [F2] Add                 :: add a new make argument
+***** [F3] Clear               :: remove that/those selected make argument(s)
+*** Catkin Make
+***** [F1] Change              :: change the value of that catkin_make argument
+***** [F2] Add                 :: add a new catkin_make argument
+***** [F3] Clear               :: remove that/those selected catkin_make argument(s)
+*** Blacklist
+***** [F1] Un-Blacklist        :: remove the selected package(s) from the blacklist
+***** [F2] Build               :: build the selected package(s)
+***** [F3] Open Folder         :: open the package's folder in a `dired' buffer (no multi selection)
+***** [F4] Open CMakeLists.txt :: open CMakeLists files of the selected package(s)
+***** [F5] Open package.xml    :: open package files of the selected package(s)
+*** Whitelist
+***** [F1] Un-Whitelist        :: remove the selected package(s) from the whitelist
+***** [F2] Build               :: build the selected package(s)
+***** [F3] Open Folder         :: open the package's folder in a `dired' buffer (no multi selection)
+***** [F4] Open CMakeLists.txt :: open CMakeLists files of the selected package(s)
+***** [F5] Open package.xml    :: open package files of the selected package(s)
+*** Packages
+***** [F1] Build               :: build the selected package(s)
+***** [F2] Open Folder         :: open the package's folder in a `dired' buffer (no multi selection)
+***** [F3] Open CMakeLists.txt :: open CMakeLists files of the selected package(s)
+***** [F4] Open package.xml    :: open package files of the selected package(s)
+***** [F5] Blacklist           :: put the selected package(s) on the blacklist
+***** [F6] Whitelist           :: put the selected package(s) on the whitelist
+
+** Tips
+**** Most of the actions above accept multiple items from that section.
+**** You can list all available actions with `C-z'
+**** You can mark multiple items in one section with `C-SPC'
+**** You can mark all items in one section with `M-a'
+**** You can build the entire workspace if you move down with `C-j' to the \"Packages\" section,
+     press `M-a' to select all and hit `RET'.
+
+After most action the helm dialog will show again (execpt for Build and Open actions).
+To quit it just press ESC.")
+
+(defvaralias 'helm-source-catkin-config-cmake-helm-message 'helm-catkin-help-string)
+(defvaralias 'helm-source-catkin-config-make-helm-message 'helm-catkin-help-string)
+(defvaralias 'helm-source-catkin-config-catkin-make-helm-message 'helm-catkin-help-string)
+(defvaralias 'helm-source-catkin-config-whitelist-helm-message 'helm-catkin-help-string)
+(defvaralias 'helm-source-catkin-config-blacklist-helm-message 'helm-catkin-help-string)
+(defvaralias 'helm-source-catkin-config-packages-helm-message 'helm-catkin-help-string)
+(defvaralias 'helm-source-catkin-config-new-helm-message 'helm-catkin-help-string)
+
+;;;###autoload
+(defun catkin ()
+  "Helm command for catkin. For more information use `C-h v helm-catkin-help-message' or
+press `C-c ?' in the catkin helm query.
+
+See `helm-catkin-help-string'
+"
+ (interactive)
   (catkin--setup)
-  (helm :buffer "* Catkin *"
-        :sources '(catkin--config-cmake-sources
-                   catkin--config-make-sources
-                   catkin--config-catkin-make-sources
-                   catkin--config-whitelist-sources
-                   catkin--config-blacklist-sources
-                   catkin--config-packages-sources
-                   catkin--config-new-sources
+  (helm :buffer "*helm Catkin*"
+
+        :sources '(helm-source-catkin-config-new
+                   helm-source-catkin-config-cmake
+                   helm-source-catkin-config-make
+                   helm-source-catkin-config-catkin-make
+                   helm-source-catkin-config-whitelist
+                   helm-source-catkin-config-blacklist
+                   helm-source-catkin-config-packages
                    )
         )
   )
@@ -495,23 +571,44 @@ To quit it just press ESC.
   (dired (catkin--util-absolute-path-of pkg))
   )
 
+(defvar helm-catkin-build-help-message
+  "* Catkin build Help
+Prompts the user via a helm dialog to select one or more
+packages to build in the current workspace.
+
+** Tips
+**** Most of the actions above accept multiple items from that section.
+**** You can list all available actions with `C-z'
+**** You can mark multiple items in one section with `C-SPC'
+**** You can mark all items in one section with `M-a'
+
+** Actions:
+**** [F1] Build:                Build the selected package(s)
+**** [F2] Open Folder:          Open the package's folder in `dired' (no multiselection possible)
+**** [F3] Open CMakeLists.txt   Open the `CMakeList.txt' file(s) in new buffer(s) for the selected package(s)
+**** [F4] Open package.xml      Open the `package.xml' file(s) in new buffer(s) for the selected package(s)
+")
+(defvar helm-source-catkin-build-source
+  (helm-build-sync-source "Packages"
+    :candidates 'catkin-list
+    :help-message 'helm-catkin-build-help-message
+    :action '(("Build" . (lambda (c) (catkin-build-package (helm-marked-candidates))))
+              ("Open Folder" . catkin-open-pkg-dired)
+              ("Open CMakeLists.txt" . (lambda (c) (catkin-open-pkg-cmakelist (helm-marked-candidates))))
+              ("Open package.xml" . (lambda (c) (catkin-open-pkg-package (helm-marked-candidates))))
+              )
+    ))
+
 ;;;###autoload
 (defun catkin-build ()
-  "Prompts the user via a helm dialog to select one or more
-packages to build in the current workspace. `C-SPC' will enable
-multiple selections while `M-a' selects all packages."
-  (interactive)
+"Prompts the user via a helm dialog to select one or more
+  packages to build in the current workspace.
+
+  See `helm-catkin-build-help-message'"
+ (interactive)
   (catkin--setup)
-        :sources (helm-build-sync-source "Packages"
-                   :candidates (catkin-list)
-                   :fuzzy-match t
-                   :action '(("Build" . (lambda (c) (catkin-build-package (helm-marked-candidates))))
-                             ("Open Folder" . catkin-open-pkg-dired)
-                             ("Open CMakeLists.txt" . (lambda (c) (catkin-open-pkg-cmakelist (helm-marked-candidates))))
-                             ("Open package.xml" . (lambda (c) (catkin-open-pkg-package (helm-marked-candidates))))
-                             )
-                   )
   (helm :buffer "*helm Catkin Build*"
+        :sources 'helm-source-catkin-build-source
         )
   )
 

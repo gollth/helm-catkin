@@ -12,6 +12,23 @@
 ;; It integrates with `helm' such that the config is shown in a helm dialog and can be customized
 ;; with actions. The colored build output is put in a dedicated buffer.
 
+;; All `catkin' functions require a workspace defined. This is saved in a local environment
+;; variable within EMACS called `EMACS_CATKIN_WS'. It is tried that the workspace is guessed
+;; based on your current $CMAKE_PREFIX_PATH (similar like `roscd' does this). When this is
+;; not working the catkin command will report an error. You should then explicately call
+;; `catkin-set-workspace' which asks you to enter a path to your workspace. This command
+;; can also be used to change between different workspaces
+
+;; Quick overview of provided functionality:
+;; `catkin-set-workspace'  :: Sets the path to the catkin workspace for all further catkin commands
+;; `catkin-workspace'      :: Returns and reports the value of the currently set workspace
+;; `catkin'                :: Main command for showing, configuring and building in a helm window
+;; `catkin-build'          :: Build one, multiple or all packages in the current workspace
+;; `catkin-init'           :: Initializes the workspace and create a src/ folder if it doesn't exist
+;; `catkin-clean'          :: Clean the workspace (remove build/, devel/ and install/ folders)
+;; `catkin-config-show'    :: Shows the current config in a new buffer
+;; `catkin-config-open'    :: Opens the .catkin_tools/profiles/default/config.yaml file in a buffer
+
 ;;; Code:
 
 (require 'helm)
@@ -565,7 +582,7 @@ See `helm-catkin-help-string'
    (format "catkin list --workspace %s --unformatted --quiet" (getenv catkin--WS)))
   )
 (defun catkin-open-file-in (pkg file)
-  "Opens the file at `$(rospack find pkg)/fil'. FILE can be a relative path to PKG."
+  "Opens the file at `$(rospack find pkg)/FILE'. FILE can be a relative path to PKG."
   (interactive)
   (catkin--setup)
   (find-file (format "%s/%s" (catkin--util-absolute-path-of pkg) file))

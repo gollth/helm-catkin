@@ -39,6 +39,13 @@ of nil if no match. Can be used to test if a certain change was made between the
   )
 
 
+(ert-deftest test-catkin-workspace-returns-path ()
+  "Tests if the catkin-workspace function returns a string to the current workspace"
+  (with-mock
+   (mock (getenv catkin--WS) => path)
+   (should (string= path (catkin-workspace)))
+   )
+  )
 
 (ert-deftest test-catkin--util-format-list-returns-string ()
   "Tests if the catkin--util-format-list function returns a string for given inputs"
@@ -111,10 +118,14 @@ of nil if no match. Can be used to test if a certain change was made between the
 
 (ert-deftest test-catkin--set-ws-without-args-looks-into-cmake-prefix-path ()
   "Calling catkin--set-ws without explicit path argument makes the function read the value from CMAKE_PREFIX_PATH"
-  (with-mock
-    (mock (getenv "CMAKE_PREFIX_PATH") => path :times 1)
-    (mock (setenv catkin--WS path) :times 1)
-    (should-not (catkin--set-ws))  ;; returns nil on success
+  (let ((cmake-prefix-path (format "%sdevel" path))
+        (catkin-marker (format "%sdevel/.catkin" path)))
+    (with-mock
+      (mock (getenv "CMAKE_PREFIX_PATH") => cmake-prefix-path :times 1)
+      (mock (file-exists-p catkin-marker) => t)
+      (mock (setenv catkin--WS *) :times 1)
+      (should-not (catkin--set-ws))  ;; returns nil on success
+      )
     )
   )
 

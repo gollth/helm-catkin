@@ -67,6 +67,14 @@ If SEPARATOR is nil, the newline character is used to split stdout."
   )
 
 ;;;###autoload
+(defun catkin-workspace ()
+  (let ((ws (getenv catkin--WS)))
+    (message (format "Catkin workspace currently set to: '%s'" ws))
+    ws
+    )
+  )
+
+;;;###autoload
 (defun catkin-set-workspace (&optional path)
   "Sets the current catkin workspace to PATH. If PATH is nil the user is prompted to enter the path"
   (interactive)
@@ -113,6 +121,16 @@ Check the value of CMAKE_PREFIX_PATH with `setenv' and/or call `catkin-set-works
     )
   )
 
+;;;###autoload
+(defun catkin-clean ()
+  "Cleans the build/ devel/ and install/ folder for the catkin workspace at $EMACS_CATKIN_WS"
+  (interactive)
+  (let ((ws (getenv catkin--WS)))
+    (when (y-or-n-p (format "Clean workspace at '%s'?" ws))
+      (call-process-shell-command (format "catkin clean --workspace %s -y" ws)))
+      )
+  )
+
 (defun catkin--source (command)
   "Prepends a `source $EMACS_CATKIN_WS/devel/setup.bash &&' before COMMAND if such a file exists."
   (let* ((ws (getenv catkin--WS))
@@ -126,14 +144,17 @@ Check the value of CMAKE_PREFIX_PATH with `setenv' and/or call `catkin-set-works
 
 ;;;###autoload
 (defun catkin-config-show ()
-  "Prints the current configuration the catkin workspace at $EMACS_CATKIN_WS to a new buffer called *catkin-config*"
+  "Prints the current configuration the catkin workspace at $EMACS_CATKIN_WS to a new buffer called *catkin-config*.
+This can be dismissed by pressing `q'"
   (catkin--setup)
   (switch-to-buffer-other-window "*catkin-config*")
   (erase-buffer)
   ; Pipe stderr to null to supress "could not determine width" warning
   (call-process-shell-command (format "catkin --force-color config --workspace %s 2> /dev/null" (getenv catkin--WS)) nil t)
   (xterm-color-colorize-buffer)
-  (other-window 1)
+  (evil-normal-state)  ; leave insert mode
+  (read-only-mode)     ; mark as not-editable
+  (local-set-key (kbd "q") (lambda () (interactive) (kill-this-buffer) (delete-window)))
   )
 
 ;;;###autoload

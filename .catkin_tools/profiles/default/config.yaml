@@ -1,0 +1,24 @@
+blacklist:
+- pkg1
+- pkg2
+- pkg3
+build_space: build
+catkin_make_args: []
+cmake_args:
+- -DCMAKE_BUILD_TYPE=Release
+- -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+devel_layout: linked
+devel_space: devel
+extend_path: null
+install: false
+install_space: install
+isolate_install: false
+jobs_args:
+- -j4
+log_space: logs
+make_args:
+- -some_make_arg
+source_space: src
+use_env_cache: false
+use_internal_make_jobserver: true
+whitelist: []

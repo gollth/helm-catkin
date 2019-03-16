@@ -98,6 +98,28 @@ After most action the helm dialog will show again (execpt for Build and Open act
 To quit it just press ESC.")
 
 
+## Shortcuts
+Spacemacs users can use these sample shortcuts in their `.spacemacs` init file:
+
+```lisp
+(defun dotspacemacs/user-config ()
+
+  ;; ... other user config ...
+
+  ;; Catkin shortcut
+  (spacemacs/declare-prefix "yc" "Catkin")
+  (spacemacs/set-leader-keys "ycc" 'catkin)
+  (spacemacs/set-leader-keys "ycb" 'catkin-build)
+  (spacemacs/set-leader-keys "ycw" 'catkin-set-workspace)
+  (spacemacs/set-leader-keys "ycx" 'catkin-clean)
+  (spacemacs/set-leader-keys "yci" 'catkin-init)
+  (spacemacs/set-leader-keys "yco" 'catkin-config-open)
+
+)
+```
+
+Since you seem to be a ROS user you might find the [helm-ros](https://github.com/syohex/ro-helm) also interessting.
+
 ## Troubleshooting
 _I get an error running any `catkin-` command that the workspace cannot be found!_
 > Follow the [Workspace Setup](#workspace-setup). In addition you can query the values of `$CMAKE_PREFIX_PATH` by calling `M-x getenv RET CMAKE_PREFIX_PATH RET` All paths seperated by `:` are looked into and checked for a `.catkin` marker file. The first one found will assumed to be the current workspace. In the same way you can that `$EMACS_CAKTIN_WS` is set correctly.

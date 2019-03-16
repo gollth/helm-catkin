@@ -36,8 +36,9 @@
 
 (defconst catkin--WS "EMACS_CATKIN_WS")
 (defun catkin--parse-config (key)
-  (let ((path (format "%s/.catkin_tools/profiles/default/config.yaml" (getenv catkin--WS))))
-    (if (null (file-exists-p path)) (error "Catkin workspace seems uninitialized. Use `(catkin-init)' to do that now"))
+  (let* ((ws (getenv catkin--WS))
+         (path (format "%s/.catkin_tools/profiles/default/config.yaml" ws)))
+    (if (null (file-exists-p path)) (error "Catkin workspace '%s'  seems uninitialized. Use `(catkin-init)' to do that now" ws))
 
     (ignore-errors
       (with-temp-buffer

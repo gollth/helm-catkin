@@ -3,14 +3,16 @@
 ;; Copyright (C) 2019  Thore Goll
 
 ;; Author:  gollth
-;; Keywords: tools, ROS
+;; Keywords: catkin, build, tools, ROS
 ;; Package-Requires: (helm xterm-color el-mock)
 
 ;;; Commentary:
 
 ;; catkin is a package providing an interface to catkin-tools `https://catkin-tools.readthedocs.io/en/latest/'.
 ;; It integrates with `helm' such that the config is shown in a helm dialog and can be customized
-;; with actions. The colored build output is put in a dedicated buffer.
+;; with actions.
+
+;; Besides adjusting the config, you can build the ROS packages in the workspace in a colored build buffer.
 
 ;; All `catkin' functions require a workspace defined. This is saved in a local environment
 ;; variable within EMACS called `EMACS_CATKIN_WS'. It is tried that the workspace is guessed

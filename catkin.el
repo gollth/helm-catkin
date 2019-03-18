@@ -119,14 +119,14 @@ It sets the environment variable EMACS_CATKIN_WS to the value of WS. When WS is
 nilA similar to `roscd' this function looks in all values within
 $CMAKE_PREFIX_PATH and chooses the first one as WS which contains a '.catkin' file"
   (let ((cmake-prefix-path (getenv "CMAKE_PREFIX_PATH")))
-    (cond (ws (setenv catkin--WS ws))
+    (cond (ws (setenv catkin--WS (expand-file-name ws)))
           ((null cmake-prefix-path)
            (error "Cannot automatically set catkin workspace because $CMAKE_PREFIX_PATH is not set.
 Check the value of CMAKE_PREFIX_PATH with `setenv' and/or call `catkin-set-workspace' with a path to your workspace (e.g. \"/opt/ros/kinetic\")"))
           (t (loop for path in (split-string cmake-prefix-path ":")
                  if (file-exists-p (format "%s/.catkin" path))
-                 do (setenv catkin--WS (format "%s/.." path))
-                 and do (message (format "Catkin: Setting workspace to %s" path))
+                 do (setenv catkin--WS (expand-file-name (format "%s/.." path)))
+                 and do (message (format "Catkin: Setting workspace to %s" (expand-file-name path)))
                  and do (return)
                  finally do (error "Could not find any catkin workspace within $CMAKE_PREFIX_PATH")
                  )

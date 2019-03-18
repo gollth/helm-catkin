@@ -93,6 +93,10 @@ If SEPARATOR is nil, the newline character is used to split stdout."
 
 ;;;###autoload
 (defun catkin-workspace ()
+  "Print the currently set catkin workspace to the message line.
+The value as a string is returned."
+  (interactive)
+  (catkin--setup)
   (let ((ws (getenv catkin--WS)))
     (message (format "Catkin workspace currently set to: '%s'" ws))
     ws

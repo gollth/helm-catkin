@@ -93,6 +93,10 @@ If SEPARATOR is nil, the newline character is used to split stdout."
 
 ;;;###autoload
 (defun catkin-workspace ()
+  "Print the currently set catkin workspace to the message line.
+The value as a string is returned."
+  (interactive)
+  (catkin--setup)
   (let ((ws (getenv catkin--WS)))
     (message (format "Catkin workspace currently set to: '%s'" ws))
     ws
@@ -115,14 +119,14 @@ It sets the environment variable EMACS_CATKIN_WS to the value of WS. When WS is
 nilA similar to `roscd' this function looks in all values within
 $CMAKE_PREFIX_PATH and chooses the first one as WS which contains a '.catkin' file"
   (let ((cmake-prefix-path (getenv "CMAKE_PREFIX_PATH")))
-    (cond (ws (setenv catkin--WS ws))
+    (cond (ws (setenv catkin--WS (expand-file-name ws)))
           ((null cmake-prefix-path)
            (error "Cannot automatically set catkin workspace because $CMAKE_PREFIX_PATH is not set.
 Check the value of CMAKE_PREFIX_PATH with `setenv' and/or call `catkin-set-workspace' with a path to your workspace (e.g. \"/opt/ros/kinetic\")"))
           (t (loop for path in (split-string cmake-prefix-path ":")
                  if (file-exists-p (format "%s/.catkin" path))
-                 do (setenv catkin--WS (format "%s/.." path))
-                 and do (message (format "Catkin: Setting workspace to %s" path))
+                 do (setenv catkin--WS (expand-file-name (format "%s/.." path)))
+                 and do (message (format "Catkin: Setting workspace to %s" (expand-file-name path)))
                  and do (return)
                  finally do (error "Could not find any catkin workspace within $CMAKE_PREFIX_PATH")
                  )
@@ -133,16 +137,22 @@ Check the value of CMAKE_PREFIX_PATH with `setenv' and/or call `catkin-set-works
 
 ;;;###autoload
 (defun catkin-init ()
-  "(Re-)Initialize a catkin workspace at $EMACS_CATKIN_WS."
+  "(Re-)Initialize a catkin workspace at $EMACS_CATKIN_WS.
+Creates the folder if it does not exist and also a child 'src' folder."
   (interactive)
+  ;; If current workspace is null, prompt the user for it
+  (if (null (getenv catkin--WS)) (catkin-set-workspace))
   (let ((ws (getenv catkin--WS)))
     (unless (file-exists-p ws)
       (unless (y-or-n-p (format "Path %s does not exist. Create? " ws))
         (error "Cannot initialize workspace `%s' since it doesn't exist" ws)
         )
       (make-directory (format "%s/src" ws) t)  ; also create parent directiories
-      (call-process-shell-command (format "catkin init --workspace %s" ws))
       )
+    ;; Now that everything should be setup, call catkin config --init
+    ;; to create the .catkin_tools/profile/default/config.yaml file
+    (call-process-shell-command (format "catkin config --init --workspace %s" ws))
+    (message (format "Catkin workspace initialized successfully at '%s'" ws))
     )
   )
 
@@ -608,11 +618,19 @@ PKG is the name of the ros package and FILE a relative path to it."
 Prompts the user via a helm dialog to select one or more
 packages to build in the current workspace.
 
+The first section specifies to build the default configuration
+setup by the `catkin' command. For example if you have black- or
+whitelisted packages, building with \"[default]\" will take this
+into account. Otherwise you can explicately select packages in
+the second section, which should be build regardless of black-
+and whitelist.
+
 ** Tips
+**** To adjust the config from the build command use the [F2] on \"[default]\"
 **** Most of the actions above accept multiple items from that section.
 **** You can list all available actions with `C-z'
 **** You can mark multiple items in one section with `C-SPC'
-**** You can mark all items in one section with `M-a'
+**** You can mark all items in the \"Packages\" section with `M-a'
 
 ** Actions:
 **** [F1] Build:                Build the selected package(s)
@@ -620,6 +638,14 @@ packages to build in the current workspace.
 **** [F3] Open CMakeLists.txt   Open the `CMakeList.txt' file(s) in new buffer(s) for the selected package(s)
 **** [F4] Open package.xml      Open the `package.xml' file(s) in new buffer(s) for the selected package(s)
 ")
+(defvar catkin--helm-source-catkin-build-default-source
+   (helm-build-sync-source "Config"
+     :candidates '("[default]")
+     :help-message 'catkin--helm-catkin-build-help-message
+     :action '(("Build" . (lambda (_) (catkin-build-package)))
+               ("Open Config" . (lambda (_) (catkin))))
+     )
+   )
 (defvar catkin--helm-source-catkin-build-source
   (helm-build-sync-source "Packages"
     :candidates 'catkin-list
@@ -630,7 +656,6 @@ packages to build in the current workspace.
               ("Open package.xml" . (lambda (c) (catkin-open-pkg-package (helm-marked-candidates))))
               )
     ))
-
 ;;;###autoload
 (defun catkin-build ()
   "Prompt the user via a helm dialog to select one or more packages to build.
@@ -639,7 +664,8 @@ packages to build in the current workspace.
  (interactive)
   (catkin--setup)
   (helm :buffer "*helm Catkin Build*"
-        :sources 'catkin--helm-source-catkin-build-source
+        :sources '(catkin--helm-source-catkin-build-default-source
+                   catkin--helm-source-catkin-build-source)
         )
   )
 

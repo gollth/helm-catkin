@@ -6,6 +6,10 @@ This package integrates the [catkin](http://wiki.ros.org/catkin) build tool for 
 - Configure `cmake`, `make` and `catkin_make` arguments
 - Blacklist or whitelist packages in the workspace
 
+## Demo
+
+![Animated Demo of Catkin](demo.gif)
+
 ## Installation
 Since you have found this package I assume you have ROS installed. If you haven't already install catkin-tools:
 

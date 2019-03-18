@@ -608,11 +608,19 @@ PKG is the name of the ros package and FILE a relative path to it."
 Prompts the user via a helm dialog to select one or more
 packages to build in the current workspace.
 
+The first section specifies to build the default configuration
+setup by the `catkin' command. For example if you have black- or
+whitelisted packages, building with \"[default]\" will take this
+into account. Otherwise you can explicately select packages in
+the second section, which should be build regardless of black-
+and whitelist.
+
 ** Tips
+**** To adjust the config from the build command use the [F2] on \"[default]\"
 **** Most of the actions above accept multiple items from that section.
 **** You can list all available actions with `C-z'
 **** You can mark multiple items in one section with `C-SPC'
-**** You can mark all items in one section with `M-a'
+**** You can mark all items in the \"Packages\" section with `M-a'
 
 ** Actions:
 **** [F1] Build:                Build the selected package(s)
@@ -620,6 +628,14 @@ packages to build in the current workspace.
 **** [F3] Open CMakeLists.txt   Open the `CMakeList.txt' file(s) in new buffer(s) for the selected package(s)
 **** [F4] Open package.xml      Open the `package.xml' file(s) in new buffer(s) for the selected package(s)
 ")
+(defvar catkin--helm-source-catkin-build-default-source
+   (helm-build-sync-source "Config"
+     :candidates '("[default]")
+     :help-message 'catkin--helm-catkin-build-help-message
+     :action '(("Build" . (lambda (_) (catkin-build-package)))
+               ("Open Config" . (lambda (_) (catkin))))
+     )
+   )
 (defvar catkin--helm-source-catkin-build-source
   (helm-build-sync-source "Packages"
     :candidates 'catkin-list
@@ -630,7 +646,6 @@ packages to build in the current workspace.
               ("Open package.xml" . (lambda (c) (catkin-open-pkg-package (helm-marked-candidates))))
               )
     ))
-
 ;;;###autoload
 (defun catkin-build ()
   "Prompt the user via a helm dialog to select one or more packages to build.
@@ -639,7 +654,8 @@ packages to build in the current workspace.
  (interactive)
   (catkin--setup)
   (helm :buffer "*helm Catkin Build*"
-        :sources 'catkin--helm-source-catkin-build-source
+        :sources '(catkin--helm-source-catkin-build-default-source
+                   catkin--helm-source-catkin-build-source)
         )
   )
 

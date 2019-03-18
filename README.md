@@ -64,7 +64,7 @@ If you want to explicately set a different workspace use `M-x catkin-set-workspa
 The current workspace is saved in the current emacs session in the environment variable `$EMACS_CATKIN_WS`. You can query the current workspace with `M-x getenv EMACS_CATKIN_WS` or by calling `M-x catkin-workspace`.
 
 ## Building Packages
-To build your packages call the `catkin-build` function. This interactively prompts a [helm](https://emacs-helm.github.io/helm/) query with all packages in your workspace. Pressing `RET` on any will build this package. This opens a special-mode window with the build output of `catkin build` in it. You can close this window by pressing `q` when the build is done.
+To build your packages call the `catkin-build` function. This interactively prompts a [helm](https://emacs-helm.github.io/helm/) with two sections. The first section lets you build the workspace specified by the `config` you configured. The second **Packages** section list all packages in your workspace. Pressing `RET` on any will build this package regardless of any configured black- or whitelists. Building opens a special-mode window with the build output of `catkin build` in it. You can close this window by pressing `q` when the build is done.
 
 > **Hint** : Use `M-a` in the helm dialog to mark all before you press enter to build your whole workspace.
 

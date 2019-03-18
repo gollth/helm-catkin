@@ -137,16 +137,22 @@ Check the value of CMAKE_PREFIX_PATH with `setenv' and/or call `catkin-set-works
 
 ;;;###autoload
 (defun catkin-init ()
-  "(Re-)Initialize a catkin workspace at $EMACS_CATKIN_WS."
+  "(Re-)Initialize a catkin workspace at $EMACS_CATKIN_WS.
+Creates the folder if it does not exist and also a child 'src' folder."
   (interactive)
+  ;; If current workspace is null, prompt the user for it
+  (if (null (getenv catkin--WS)) (catkin-set-workspace))
   (let ((ws (getenv catkin--WS)))
     (unless (file-exists-p ws)
       (unless (y-or-n-p (format "Path %s does not exist. Create? " ws))
         (error "Cannot initialize workspace `%s' since it doesn't exist" ws)
         )
       (make-directory (format "%s/src" ws) t)  ; also create parent directiories
-      (call-process-shell-command (format "catkin init --workspace %s" ws))
       )
+    ;; Now that everything should be setup, call catkin config --init
+    ;; to create the .catkin_tools/profile/default/config.yaml file
+    (call-process-shell-command (format "catkin config --init --workspace %s" ws))
+    (message (format "Catkin workspace initialized successfully at '%s'" ws))
     )
   )
 

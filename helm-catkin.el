@@ -88,9 +88,21 @@ If SEPARATOR is nil, the newline character is used to split stdout."
       )
     )
   )
+
 (defun helm-catkin--util-absolute-path-of (pkg)
-  "Return the absolute path of PKG by calling \"rospack find ...\"."
-  (shell-command-to-string (helm-catkin--source (format "printf $(rospack find %s)" pkg)))
+  "Return the absolute path of PKG by calling \"rospack find ...\".
+If the package cannot be found this command raises an error."
+  (with-temp-buffer
+    (delete-file "/tmp/.catkin-error")
+    (call-process-shell-command (helm-catkin--source (format "printf $(rospack find %s)" pkg))
+                                nil
+                                '(t "/tmp/.catkin-error"))
+    (with-temp-buffer
+      (insert-file-contents "/tmp/.catkin-error")
+      (unless (string= (buffer-string) "") (error (buffer-string)))
+      )
+    (buffer-string)
+    )
   )
 
 ;;;###autoload

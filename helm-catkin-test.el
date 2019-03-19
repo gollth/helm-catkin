@@ -75,6 +75,14 @@ of nil if no match. Can be used to test if a certain change was made between the
     )
   )
 
+(ert-deftest test-helm-catkin--util-absolute-path-of-raises-for-unknown-package ()
+  "Test if the catkin--util-absolute-path function throws an error for unknown packages."
+  (with-mock
+   (mock (getenv helm-catkin--WS) => path)
+   (should-error (helm-catkin--util-absolute-path-of "some_unknown_package"))
+   )
+  )
+
 (ert-deftest test-helm-catkin--parse-config-raises-without-initialized-workspace ()
   "Test if the parse-config command throws an error when the ws is not initialized"
   (with-mock

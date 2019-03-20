@@ -557,7 +557,7 @@ the signal with which the PROCESS finishes."
     (other-window 1)     ; select the first "other" window, i.e. the build window
     ;(evil-normal-state)  ; leave insert mode
     (read-only-mode)     ; mark as not-editable
-    (local-set-key (kbd "q") (lambda () (interactive) (kill-this-buffer) (delete-window)))
+    (local-set-key (kbd "q") (lambda () (interactive) (quit-window (get-buffer-window "*Catkin Build*"))))
     )
   )
 

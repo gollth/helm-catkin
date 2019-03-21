@@ -41,6 +41,8 @@
 (require 'helm)
 (require 'xterm-color)
 
+(define-derived-mode catkin-mode special-mode "Catkin")
+
 (defconst catkin--WS "EMACS_CATKIN_WS")
 (defun catkin--parse-config (key)
   (let* ((ws (getenv catkin--WS))
@@ -188,8 +190,7 @@ The config goes to a new buffer called *Catkin Config*. This can be dismissed by
   ;; Pipe stderr to null to supress "could not determine width" warning
   (call-process-shell-command (format "catkin --force-color config --workspace %s 2> /dev/null" (getenv catkin--WS)) nil t)
   (xterm-color-colorize-buffer)
-  (read-only-mode)     ; mark as not-editable
-  (local-set-key (kbd "q") (lambda () (interactive) (kill-this-buffer) (delete-window)))
+  (catkin-mode)        ; set this buffer to be dissmissable with "Q"
   )
 
 ;;;###autoload
@@ -569,6 +570,7 @@ If PKGS is non-nil, only these packages are built, otherwise all packages in the
          (build-command (format "catkin build --workspace %s %s" (getenv catkin--WS) packages))
          (buffer (get-buffer-create "*Catkin Build*"))
          (process (progn
+                    (with-current-buffer "*Catkin Build*" (catkin-mode))
                     (async-shell-command build-command buffer)
                     (get-buffer-process buffer)
                     ))

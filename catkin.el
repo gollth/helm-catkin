@@ -180,11 +180,12 @@ Creates the folder if it does not exist and also a child 'src' folder."
 ;;;###autoload
 (defun catkin-config-show ()
   "Print the current configuration of the catkin workspace at $EMACS_CATKIN_WS.
-The config goes to a new buffer called *catkin-config*. This can be dismissed by pressing `q'."
+The config goes to a new buffer called *Catkin Config*. This can be dismissed by pressing `q'."
+  (interactive)
   (catkin--setup)
-  (switch-to-buffer-other-window "*catkin-config*")
+  (switch-to-buffer-other-window "*Catkin Config*")
   (erase-buffer)
-  ; Pipe stderr to null to supress "could not determine width" warning
+  ;; Pipe stderr to null to supress "could not determine width" warning
   (call-process-shell-command (format "catkin --force-color config --workspace %s 2> /dev/null" (getenv catkin--WS)) nil t)
   (xterm-color-colorize-buffer)
   (read-only-mode)     ; mark as not-editable

@@ -43,7 +43,7 @@ Spacemacs user can put the command in the `user-init` function of `.spacemacs`:
 | `catkin-workspace`     | Returns and reports the value of the currently set workspace           |
 | `catkin`               | Main command for showing, configuring and building in a helm window    |
 | `catkin-build`         | Build one, multiple or all packages in the current workspace           |
-| `catkin-init`          | Initializes the workspace and create a src/ folder if it doesn`t exist |
+| `catkin-init`          | Initializes the workspace and create a src/ folder if it doesn't exist |
 | `catkin-clean`         | Clean the workspace (remove build/, devel/ and install/ folders)       |
 | `catkin-config-show`   | Shows the current config in a new buffer                               |
 | `catkin-config-open`   | Opens the .catkin_tools/profiles/default/config.yaml file in a buffer  |

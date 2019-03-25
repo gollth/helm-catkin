@@ -41,6 +41,8 @@
 (require 'helm)
 (require 'xterm-color)
 
+(define-derived-mode catkin-mode special-mode "Catkin")
+
 (defconst catkin--WS "EMACS_CATKIN_WS")
 (defun catkin--parse-config (key)
   (let* ((ws (getenv catkin--WS))
@@ -180,15 +182,15 @@ Creates the folder if it does not exist and also a child 'src' folder."
 ;;;###autoload
 (defun catkin-config-show ()
   "Print the current configuration of the catkin workspace at $EMACS_CATKIN_WS.
-The config goes to a new buffer called *catkin-config*. This can be dismissed by pressing `q'."
+The config goes to a new buffer called *Catkin Config*. This can be dismissed by pressing `q'."
+  (interactive)
   (catkin--setup)
-  (switch-to-buffer-other-window "*catkin-config*")
+  (switch-to-buffer-other-window "*Catkin Config*")
   (erase-buffer)
-  ; Pipe stderr to null to supress "could not determine width" warning
+  ;; Pipe stderr to null to supress "could not determine width" warning
   (call-process-shell-command (format "catkin --force-color config --workspace %s 2> /dev/null" (getenv catkin--WS)) nil t)
   (xterm-color-colorize-buffer)
-  (read-only-mode)     ; mark as not-editable
-  (local-set-key (kbd "q") (lambda () (interactive) (kill-this-buffer) (delete-window)))
+  (catkin-mode)        ; set this buffer to be dissmissable with "Q"
   )
 
 ;;;###autoload
@@ -557,7 +559,7 @@ the signal with which the PROCESS finishes."
     (other-window 1)     ; select the first "other" window, i.e. the build window
     ;(evil-normal-state)  ; leave insert mode
     (read-only-mode)     ; mark as not-editable
-    (local-set-key (kbd "q") (lambda () (interactive) (kill-this-buffer) (delete-window)))
+    (local-set-key (kbd "q") (lambda () (interactive) (quit-window (get-buffer-window "*Catkin Build*"))))
     )
   )
 
@@ -568,6 +570,7 @@ If PKGS is non-nil, only these packages are built, otherwise all packages in the
          (build-command (format "catkin build --workspace %s %s" (getenv catkin--WS) packages))
          (buffer (get-buffer-create "*Catkin Build*"))
          (process (progn
+                    (with-current-buffer "*Catkin Build*" (catkin-mode))
                     (async-shell-command build-command buffer)
                     (get-buffer-process buffer)
                     ))

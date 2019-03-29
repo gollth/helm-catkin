@@ -233,8 +233,7 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
     :candidates 'helm-catkin-config-cmake-args
     :help-message 'helm-catkin--helm-source-catkin-config-cmake-helm-message
     :action '(("Change" . (lambda (x) (helm-catkin-config-cmake-change x) (helm-catkin)))
-              ("Add"    . (lambda (x) (helm-catkin-config-cmake-new x) (helm-catkin)))
-              ("Clear"  . (lambda (_) (helm-catkin-config-cmake-args-remove (helm-marked-candidates)) (helm-catkin))))))
+              ("Remove" . (lambda (_) (helm-catkin-config-cmake-args-remove (helm-marked-candidates)) (helm-catkin))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                   MAKE Args                                ;;
@@ -275,8 +274,7 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
     :candidates 'helm-catkin-config-make-args
     :help-message 'helm-catkin--helm-source-catkin-config-make-helm-message
     :action '(("Change" . (lambda (x) (helm-catkin-config-make-change x) (helm-catkin)))
-              ("Add"    . (lambda (x) (helm-catkin-config-make-new x) (helm-catkin)))
-              ("Clear"  . (lambda (_) (helm-catkin-config-make-args-remove (helm-marked-candidates)) (helm-catkin))))))
+              ("Remove" . (lambda (_) (helm-catkin-config-make-args-remove (helm-marked-candidates)) (helm-catkin))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                   CATKIN-MAKE Args                         ;;
@@ -317,8 +315,7 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
     :candidates 'helm-catkin-config-catkin-make-args
     :help-message 'helm-catkin--helm-source-catkin-config-catkin-make-helm-message
     :action '(("Change" . (lambda (x) (helm-catkin-config-catkin-make-change x) (helm-catkin)))
-              ("Add"    . (lambda (x) (helm-catkin-config-catkin-make-new x) (helm-catkin)))
-              ("Clear"  . (lambda (_) (helm-catkin-config-catkin-make-args-remove (helm-marked-candidates)) (helm-catkin))))))
+              ("Remove" . (lambda (_) (helm-catkin-config-catkin-make-args-remove (helm-marked-candidates)) (helm-catkin))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                   Whitelist/Blacklist                      ;;
@@ -420,16 +417,13 @@ The first action [F1] is always the default choice if you just press enter.
 ***** [F3] Catkin Make Arg     :: add a new catkin_make argument to the config
 *** CMake
 ***** [F1] Change              :: change the value of that cmake argument
-***** [F2] Add                 :: add a new cmake argument
-***** [F3] Clear               :: remove that/those selected cmake argument(s)
+***** [F3] Remove              :: remove that/those selected cmake argument(s)
 *** Make
 ***** [F1] Change              :: change the value of that make argument
-***** [F2] Add                 :: add a new make argument
-***** [F3] Clear               :: remove that/those selected make argument(s)
+***** [F3] Remove              :: remove that/those selected make argument(s)
 *** Catkin Make
 ***** [F1] Change              :: change the value of that catkin_make argument
-***** [F2] Add                 :: add a new catkin_make argument
-***** [F3] Clear               :: remove that/those selected catkin_make argument(s)
+***** [F3] Remove              :: remove that/those selected catkin_make argument(s)
 *** Blacklist
 ***** [F1] Un-Blacklist        :: remove the selected package(s) from the blacklist
 ***** [F2] Build               :: build the selected package(s)

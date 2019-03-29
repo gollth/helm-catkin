@@ -37,10 +37,10 @@ Spacemacs user can put the command in the `user-init` function of `.spacemacs`:
 ```
 
 ## All features:
-| Lisp Function Name     | Explanation                                                            |
-| ---------------------- | ---------------------------------------------------------------------- |
+| Lisp Function Name          | Explanation                                                            |
+| --------------------------- | ---------------------------------------------------------------------- |
 | `helm-catkin-set-workspace` | Sets the path to the catkin workspace for all further catkin commands  |
-| `helm-catkin-workspace`     | Returns and reports the value of the currently set workspace           |
+| `helm-catkin-no-workspace`  | Clears the variable `helm-catkin-workspace` and uses "per-buffer" mode |
 | `helm-catkin`               | Main command for showing, configuring and building in a helm window    |
 | `helm-catkin-build`         | Build one, multiple or all packages in the current workspace           |
 | `helm-catkin-init`          | Initializes the workspace and create a src/ folder if it doesn't exist |
@@ -53,11 +53,10 @@ Spacemacs user can put the command in the `user-init` function of `.spacemacs`:
 ## Workspace Setup
 This package uses the [catkin-tools](https://catkin-tools-readthedocks.io/en/latest) python wrapper. The `catkin_make` and `catkin_make_isolated` commands are *NOT* supported.
 
-Catkin relies on having a decicated workspace set to do anything. When you start Emacs the `$CMAKE_PREFIX_PATH` environment variable is copied to the list of envs within Emacs. When you invoke any `helm-catkin-` function it is tried to "guess" the current workspace based on this environment variable. When you have a line like the following in your `.bashrc` this workspace should be found.
+Catkin relies on having a decicated workspace set to do anything. You can control which workspace is used in two different ways, where the first has priority over the second:
 
-```bash
-source ~/path/to/your/catkin/ws/devel/setup.bash
-```
+1. Set the `helm-catkin-workspace` variable to some path. This can be done e.g. interactively by calling `helm-catkin-set-workspace`.
+2. Open a file inside the workspace. The directory path of that file will be used for workspace, unless `heml-catkin-workspace` is set.
 
 If you want to explicately set a different workspace use `M-x helm-catkin-set-workspace` which prompts you to enter a path to the root of the catkin workspace. You can also add this function call with an argument to your init file like:
 
@@ -65,7 +64,7 @@ If you want to explicately set a different workspace use `M-x helm-catkin-set-wo
 (helm-catkin-set-workspace "~/path/to/your/catkin/ws")
 ```
 
-The current workspace is saved in the current emacs session in the environment variable `$EMACS_CATKIN_WS`. You can query the current workspace with `M-x getenv EMACS_CATKIN_WS` or by calling `M-x helm-catkin-workspace`.
+To query the current workspace use `C-h v RET helm-catkin-workspace RET`.
 
 ## Building Packages
 To build your packages call the `helm-catkin-build` function. This interactively prompts a [helm](https://emacs-helm.github.io/helm/) with two sections. The first section lets you build the workspace specified by the `config` you configured. The second **Packages** section list all packages in your workspace. Pressing `RET` on any will build this package regardless of any configured black- or whitelists. Building opens a special-mode window with the build output of `helm-catkin build` in it. You can close this window by pressing `q` when the build is done.
@@ -126,10 +125,7 @@ Since you seem to be a ROS user you might find the [helm-ros](https://github.com
 
 ## Troubleshooting
 _I get an error running any `helm-catkin-` command that the workspace cannot be found!_
-> Follow the [Workspace Setup](#workspace-setup). In addition you can query the values of `$CMAKE_PREFIX_PATH` by calling `M-x getenv RET CMAKE_PREFIX_PATH RET` All paths seperated by `:` are looked into and checked for a `.catkin` marker file. The first one found will assumed to be the current workspace. In the same way you can that `$EMACS_CAKTIN_WS` is set correctly.
-
-_I am souring my `setup.bash` file in `.bashrc` but emacs will not find the path!_
-> There might be a problem which environment Emacs is copying from. Check [this thread](https://emacs.stackexchange.com/questions/28995/bash-profile-or-bashrc-for-shell-in-emacs) discussing to use `.bashrc` or `.bash_profile` for Emacs.
+> Follow the [Workspace Setup](#workspace-setup). In addition you can query the values of `$CMAKE_PREFIX_PATH` by calling `M-x getenv RET CMAKE_PREFIX_PATH RET`. Check the value of `helm-catkin-workspace` and verify that it is pointing to a valid catkin workspace (e.g. one with a `.catkin_tools` folder inside.) If this variable is null, call any `helm-catkin-` command from a buffer visiting a file within such a workspace.
 
 _I need support for multiple catkin profiles!_
 > Up to now only the default profile of any workspace is used. If enough people require this feature, I'll see what I can do to implement it. Up to then feel free to adjust the package and create a pull request.

@@ -18,16 +18,17 @@
 
 ;; Besides adjusting the config, you can build the ROS packages in the workspace in a colored build buffer.
 
-;; All `helm-catkin' functions require a workspace defined. This is saved in a local environment
-;; variable within EMACS called `EMACS_CATKIN_WS'. It is tried that the workspace is guessed
-;; based on your current $CMAKE_PREFIX_PATH (similar like `roscd' does this). When this is
-;; not working the catkin command will report an error. You should then explicately call
-;; `helm-catkin-set-workspace' which asks you to enter a path to your workspace. This command
-;; can also be used to change between different workspaces
+;; All `helm-catkin' functions require a workspace defined. This is saved in a global lisp
+;; variable called `helm-catkin-workspace'. Easiest way is to specify a workspace is by calling
+;; the interactive function `helm-catkin-set-workspace' which asks you to enter a path to your
+;; workspace. This command can also be used to change between different workspaces.
+
+;; Alternatively you can leave this variable at nil and use all `helm-catkin' functions on a
+;; "per-buffer" basis. This means, the workspace is guessed for the buffer you are callling
+;; the function from (only works if `helm-catkin-workspace' is nil though).
 
 ;; Quick overview of provided functionality:
 ;; `helm-catkin-set-workspace'  :: Sets the path to the helm-catkin workspace for all further helm-catkin commands
-;; `helm-catkin-workspace'      :: Returns and reports the value of the currently set workspace
 ;; `helm-catkin'                :: Main command for showing, configuring and building in a helm window
 ;; `helm-catkin-build'          :: Build one, multiple or all packages in the current workspace
 ;; `helm-catkin-init'           :: Initializes the workspace and create a src/ folder if it doesn't exist
@@ -43,9 +44,19 @@
 
 (define-derived-mode helm-catkin-mode special-mode "Catkin")
 
-(defconst helm-catkin--WS "EMACS_CATKIN_WS")
+(setq helm-catkin-workspace nil)
+
+
+(defun helm-catkin--get-workspace ()
+  "Find the catkin workspace.
+Either return `helm-catkin-workspace' if non-nil or the `default-directory' of the current buffer."
+  (helm-catkin--util-error-protected-command
+   (format "catkin locate --workspace %s"
+           ;; catkin locate crashes on trailing slashes, make sure to remove it accordingly
+           (substring (file-name-as-directory (or helm-catkin-workspace default-directory)) 0 -1))))
+
 (defun helm-catkin--parse-config (key)
-  (let* ((ws (getenv helm-catkin--WS))
+  (let* ((ws (helm-catkin--get-workspace))
          (path (format "%s/.catkin_tools/profiles/default/config.yaml" ws)))
     (if (null (file-exists-p path)) (error "Catkin workspace '%s'  seems uninitialized. Use `(helm-catkin-init)' to do that now" ws))
 
@@ -60,10 +71,6 @@
             (cond ((string= (buffer-string) "[]") '())
                   ((= 1 (count-lines (point-min) (point-max))) (buffer-string))
                   (t (split-string (replace-regexp-in-string "^- \\|^\\W*$" "" (buffer-string)) "\n")))))))))
-
-(defun helm-catkin--setup ()
-  "Call `helm-catkin--set-ws' without arguments if $EMACS_CATKIN_WS is not set."
-  (if (null (getenv helm-catkin--WS)) (helm-catkin--set-ws)))
 
 (defun helm-catkin--util-format-list (list sep)
   "Combines the elements of LIST into a string joined by SEP."
@@ -80,59 +87,48 @@ If SEPARATOR is nil, the newline character is used to split stdout."
 (defun helm-catkin--util-absolute-path-of (pkg)
   "Return the absolute path of PKG by calling \"rospack find ...\".
 If the package cannot be found this command raises an error."
+  (substring(helm-catkin--util-error-protected-command
+   (format "catkin locate --quiet --workspace %s %s" (helm-catkin--get-workspace) pkg))))
+
+(defun helm-catkin--util-error-protected-command (cmd)
   (with-temp-buffer
     (delete-file "/tmp/.catkin-error")
-    (call-process-shell-command (helm-catkin--source (format "printf $(rospack find %s)" pkg))
+    (call-process-shell-command cmd
                                 nil
                                 '(t "/tmp/.catkin-error"))
     (with-temp-buffer
       (insert-file-contents "/tmp/.catkin-error")
       (unless (string= (buffer-string) "") (error (buffer-string))))
-    (buffer-string)))
+    (substring (buffer-string) 0 -1)))
+
+(defun helm-catkin--is-workspace-initialized (path)
+  "Return nil if the workspace at PATH has not yet been initialized, t otherwise."
+  (= 0 (call-process "catkin" nil nil nil "profile" "--workspace" path "list")))
 
 ;;;###autoload
-(defun helm-catkin-workspace ()
-  "Print the currently set helm-catkin workspace to the message line.
-The value as a string is returned."
-  (interactive)
-  (helm-catkin--setup)
-  (let ((ws (getenv helm-catkin--WS)))
-    (message (format "Catkin workspace currently set to: '%s'" ws))
-    ws))
+(defun helm-catkin-no-workspace ()
+  "Clear the `helm-catkin-workspace' variable.
+This can be used to fallback to \"per-buffer\" workspaces."
+  (setq helm-catkin-workspace nil))
 
 ;;;###autoload
 (defun helm-catkin-set-workspace (&optional path)
   "Set the current catkin workspace to PATH. If PATH is nil the user is prompted to enter the path."
   (interactive)
-  (if path (helm-catkin--set-ws path)
-      (helm-catkin--set-ws (read-directory-name "Set catkin workspace: " (getenv helm-catkin--WS))))
-  (message (format "Catkin workspace set to %s" (getenv helm-catkin--WS))))
-
-(defun helm-catkin--set-ws (&optional ws)
-  "Tell EMACS which workspace to use for all `helm-catkin' commands.
-It sets the environment variable EMACS_CATKIN_WS to the value of WS. When WS is
-nilA similar to `roscd' this function looks in all values within
-$CMAKE_PREFIX_PATH and chooses the first one as WS which contains a '.catkin' file"
-  (let ((cmake-prefix-path (getenv "CMAKE_PREFIX_PATH")))
-    (cond (ws (setenv helm-catkin--WS (expand-file-name ws)))
-          ((null cmake-prefix-path)
-           (error "Cannot automatically set catkin workspace because $CMAKE_PREFIX_PATH is not set.
-Check the value of CMAKE_PREFIX_PATH with `setenv' and/or call `helm-catkin-set-workspace' with a path to your workspace (e.g. \"/opt/ros/kinetic\")"))
-          (t (loop for path in (split-string cmake-prefix-path ":")
-                 if (file-exists-p (format "%s/.catkin" path))
-                 do (setenv helm-catkin--WS (expand-file-name (format "%s/.." path)))
-                 and do (message (format "Catkin: Setting workspace to %s" (expand-file-name path)))
-                 and do (return)
-                 finally do (error "Could not find any catkin workspace within $CMAKE_PREFIX_PATH"))))))
+  (let ((ws (if path path (read-directory-name "Set catkin workspace: " (helm-catkin--get-workspace)))))
+    (unless (helm-catkin--is-workspace-initialized ws)
+      (when (y-or-n-p (format "Workspace %s seems uninitialized. Initialize now? " ws))
+        (helm-catkin-init ws)))
+    (setq helm-catkin-workspace ws)
+    (message (format "Catkin workspace set to %s" ws))))
 
 ;;;###autoload
-(defun helm-catkin-init ()
-  "(Re-)Initialize a catkin workspace at $EMACS_CATKIN_WS.
+(defun helm-catkin-init (&optional ws)
+  "(Re-)Initialize a catkin workspace at WS.
 Creates the folder if it does not exist and also a child 'src' folder."
   (interactive)
   ;; If current workspace is null, prompt the user for it
-  (if (null (getenv helm-catkin--WS)) (helm-catkin-set-workspace))
-  (let ((ws (getenv helm-catkin--WS)))
+  (let ((ws (if ws ws (helm-catkin--get-workspace))))
     (unless (file-exists-p ws)
       (unless (y-or-n-p (format "Path %s does not exist. Create? " ws))
         (error "Cannot initialize workspace `%s' since it doesn't exist" ws))
@@ -144,15 +140,16 @@ Creates the folder if it does not exist and also a child 'src' folder."
 
 ;;;###autoload
 (defun helm-catkin-clean ()
-  "Cleans the build/ devel/ and install/ folder for the catkin workspace at $EMACS_CATKIN_WS."
+  "Clean the build/ devel/ and install/ folder for the catkin workspace."
   (interactive)
-  (let ((ws (getenv helm-catkin--WS)))
+  (let ((ws (helm-catkin--get-workspace)))
     (when (y-or-n-p (format "Clean workspace at '%s'? " ws))
       (call-process-shell-command (format "catkin clean --workspace %s -y" ws)))))
 
 (defun helm-catkin--source (command)
-  "Prepend a `source $EMACS_CATKIN_WS/devel/setup.bash &&' before COMMAND if such a file exists."
-  (let* ((ws (getenv helm-catkin--WS))
+  "Prepend a `source $WS/devel/setup.bash &&' before COMMAND if such a file exists.
+Otherwise leave COMMAND untouched."
+  (let* ((ws (helm-catkin--get-workspace))
          (setup-file (format "%s/devel/setup.bash" ws)))
     (if (file-exists-p setup-file)
         (format "source %s && %s" setup-file command)
@@ -160,21 +157,21 @@ Creates the folder if it does not exist and also a child 'src' folder."
 
 ;;;###autoload
 (defun helm-catkin-config-show ()
-  "Print the current configuration of the catkin workspace at $EMACS_CATKIN_WS.
+  "Print the current configuration of the catkin workspace.
 The config goes to a new buffer called *Catkin Config*. This can be dismissed by pressing `q'."
   (interactive)
-  (helm-catkin--setup)
   (switch-to-buffer-other-window "*Catkin Config*")
   (erase-buffer)
   ;; Pipe stderr to null to supress "could not determine width" warning
-  (call-process-shell-command (format "catkin --force-color config --workspace %s 2> /dev/null" (getenv helm-catkin--WS)) nil t)
+  (call-process-shell-command (format "catkin --force-color config --workspace %s 2> /dev/null"
+                                      (helm-catkin--get-workspace)) nil t)
   (xterm-color-colorize-buffer)
   (helm-catkin-mode))        ; set this buffer to be dissmissable with "Q"
 
 ;;;###autoload
 (defun helm-catkin-config-open ()
-  "Opens the config file for the catkin profile for the workspace at $EMACS_CATKIN_WS."
-  (find-file (format "%s/.catkin_tools/profiles/default/config.yaml" (getenv helm-catkin--WS))))
+  "Open the config file for the default profile of the catkin workspace."
+  (find-file (format "%s/.catkin_tools/profiles/default/config.yaml" (helm-catkin--get-workspace))))
 
 (defun helm-catkin--config-args (operation &optional args)
   "Call 'catkin config' for the workspace to execute some OPERATION.
@@ -184,13 +181,14 @@ This function can be used to set args of a certain type like so:
 \(helm-catkin--config-args \"--cmake-args\"
                      '(\"-DCMAKE_ARG1=foo\" \"-DCMAKE_ARG2=bar\"))
 \(helm-catkin--config-args \"--no-make-args\")"
-  (unless (getenv helm-catkin--WS) (error (format "Catkin workspace at $%s not set. Have you called `helm-catkin-set-workspace'?" helm-catkin--WS)))
+  (unless (helm-catkin--is-workspace-initialized (helm-catkin--get-workspace))
+    (error (format "Catkin workspace at %s not yet initialized. Have you called `helm-catkin-set-workspace'?" (helm-catkin--get-workspace))))
   (let ((arg-string (helm-catkin--util-format-list args " ")))
     (ignore-errors
       (substring
        (call-process-shell-command
         (format "catkin config --workspace %s %s %s"
-                (getenv helm-catkin--WS)
+                (helm-catkin--get-workspace)
                 operation
                 arg-string))
        0 -1))))
@@ -199,22 +197,21 @@ This function can be used to set args of a certain type like so:
 ;;                  CMAKE Args                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun helm-catkin-config-cmake-args ()
-  "Return a list of all currenty set cmake args for the workspace at $EMACS_CATKIN_WS."
+  "Return a list of all currenty set cmake args for the workspace."
   (helm-catkin--parse-config "cmake_args"))
 
 (defalias 'helm-catkin-config-cmake-args-clear (apply-partially 'helm-catkin--config-args "--no-cmake-args")
-  "Removes all cmake args for the current workspace at $EMACS_CATKIN_WS")
+  "Removes all cmake args for the current workspace")
 
 (defalias 'helm-catkin-config-cmake-args-set (apply-partially 'helm-catkin--config-args "--cmake-args")
-  "Sets a list of cmake args for the current workspace at $EMACS_CATKIN_WS. Passing an empty list to ARGS will clear all currently set args.")
+  "Sets a list of cmake args for the current workspace. Passing an empty list to ARGS will clear all currently set args.")
 
 (defalias 'helm-catkin-config-cmake-args-add (apply-partially 'helm-catkin--config-args "--append-args --cmake-args")
-  "Adds a list of cmake args to the existing set of cmake args for the current workspace at $EMACS_CATKIN_WS.")
+  "Adds a list of cmake args to the existing set of cmake args for the current workspace.")
 
 (defalias 'helm-catkin-config-cmake-args-remove (apply-partially 'helm-catkin--config-args "--remove-args --cmake-args")
-  "Removes a list of cmake args from the existing set of cmake args for
-the current workspace at $EMACS_CATKIN_WS. Args which are currently
-not set and are requested to be removed don't provoce an error and are just ignored.")
+  "Removes a list of cmake args from the existing set of cmake args for the current workspace.
+Args which are currently not set and are requested to be removed don't provoce an error and are just ignored.")
 
 (defun helm-catkin-config-cmake-change (arg)
   "Prompt the user to enter a new value for a CMake arg.
@@ -241,22 +238,21 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
 ;;                   MAKE Args                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun helm-catkin-config-make-args ()
-  "Return a list of all currenty set make args for the workspace at $EMACS_CATKIN_WS."
+  "Return a list of all currenty set make args for the current workspace."
   (append (helm-catkin--parse-config "make_args") (helm-catkin--parse-config "jobs_args")))
 
 (defalias 'helm-catkin-config-make-args-clear (apply-partially 'helm-catkin--config-args "--no-make-args")
-  "Removes all make args for the current workspace at $EMACS_CATKIN_WS.")
+  "Remove all make args for the current workspace.")
 (defalias 'helm-catkin-config-make-args-set (apply-partially 'helm-catkin--config-args "--make-args")
-  "Sets a list of make args for the current workspace at $EMACS_CATKIN_WS.
+  "Set a list of make args for the current workspace.
 Passing an empty list to ARGS will clear all currently set args.")
 
 (defalias 'helm-catkin-config-make-args-add (apply-partially 'helm-catkin--config-args "--append-args --make-args")
-  "Add a list of make args to the existing set of make args for the current workspace at $EMACS_CATKIN_WS.")
+  "Add a list of make args to the existing set of make args for the current workspace.")
 
 (defalias 'helm-catkin-config-make-args-remove (apply-partially 'helm-catkin--config-args "--remove-args --make-args")
-  "Remove a list of make args from the existing set of make args for
-the current workspace at $EMACS_CATKIN_WS. Args which are currently
-not set and are requested to be removed don't provoce an error and
+  "Remove a list of make args from the existing set of make args for the current workspace.
+Args which are currently not set and are requested to be removed don't provoce an error and
 are just ignored.")
 
 (defun helm-catkin-config-make-change (arg)
@@ -284,24 +280,22 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
 ;;                   CATKIN-MAKE Args                         ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun helm-catkin-config-catkin-make-args ()
-  "Return a list of all currenty set catkin-make args for the workspace at $EMACS_CATKIN_WS."
+  "Return a list of all currenty set catkin-make args for the current workspace."
   (helm-catkin--parse-config "catkin_make_args"))
 
 (defalias 'helm-catkin-config-catkin-make-args-clear (apply-partially 'helm-catkin--config-args "--no-catkin-make-args")
-  "Remove all catkin-make args for the current workspace at $EMACS_CATKIN_WS.")
+  "Remove all catkin-make args for the current workspace.")
 
 (defalias 'helm-catkin-config-catkin-make-args-set (apply-partially 'helm-catkin--config-args "--catkin-make-args")
-  "Set a list of catkin-make args for the current workspace at $EMACS_CATKIN_WS.
+  "Set a list of catkin-make args for the current workspace.
 Passing an empty list to ARGS will clear all currently set args.")
 
 (defalias 'helm-catkin-config-catkin-make-args-add (apply-partially 'helm-catkin--config-args "--append-args --catkin-make-args")
-  "Add a list of catkin-make args to the existing set of catkin-make args for the current workspace at $EMACS_CATKIN_WS.")
+  "Add a list of catkin-make args to the existing set of catkin-make args for the current workspace.")
 
 (defalias 'helm-catkin-config-catkin-make-args-remove (apply-partially 'helm-catkin--config-args "--remove-args --catkin-make-args")
-  "Remove a list of catkin-make args from the existing set of catkin-make args for
-the current workspace at $EMACS_CATKIN_WS. Args which are currently
-not set and are requested to be removed don't provoce an error and
-are just ignored.")
+  "Remove a list of catkin-make args from the existing set of catkin-make args for the current workspace.
+Args which are currently not set and are requested to be removed don't provoce an error and are just ignored.")
 
 (defun helm-catkin-config-catkin-make-change (arg)
   "Prompt the user to enter a new value for a Catkin-Make arg.
@@ -321,24 +315,23 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
     :candidates 'helm-catkin-config-catkin-make-args
     :help-message 'helm-catkin--helm-source-catkin-config-catkin-make-helm-message
     :action '(("Change" . (lambda (x) (helm-catkin-config-catkin-make-change x) (helm-catkin)))
-              ("Add" . (lambda (x) (helm-catkin-config-catkin-make-new x) (helm-catkin)))
-              ("Clear" . (lambda (_) (helm-catkin-config-catkin-make-args-remove (helm-marked-candidates)) (helm-catkin))))))
+              ("Add"    . (lambda (x) (helm-catkin-config-catkin-make-new x) (helm-catkin)))
+              ("Clear"  . (lambda (_) (helm-catkin-config-catkin-make-args-remove (helm-marked-candidates)) (helm-catkin))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                   Whitelist/Blacklist                      ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun helm-catkin-config-whitelist ()
-  "Return a list of all currenty whitelisted packages for the workspace at $EMACS_CATKIN_WS."
+  "Return a list of all currenty whitelisted packages for the current workspace."
   (helm-catkin--parse-config "whitelist"))
 
 (defalias 'helm-catkin-config-whitelist-add (apply-partially 'helm-catkin--config-args "--append-args --whitelist")
-  "Mark a list of packages to be whitelisted for the current workspace at $EMACS_CATKIN_WS.")
+  "Mark a list of packages to be whitelisted for the current workspace.")
 
 (defalias 'helm-catkin-config-whitelist-remove (apply-partially 'helm-catkin--config-args "--remove-args --whitelist")
   "Remove a list of whitelisted packages from the existing whitelist for
-the current workspace at $EMACS_CATKIN_WS. Packages which are currently
-not whitelisted and are requested to be removed don't provoce an error and
-are just ignored.")
+the current workspace. Packages which are currently not whitelisted and
+are requested to be removed don't provoce an error and are just ignored.")
 
 (defvar helm-catkin--helm-source-catkin-config-whitelist
   (helm-build-sync-source "Whitelist"
@@ -351,16 +344,16 @@ are just ignored.")
               ("Open package.xml" . (lambda (c) (helm-catkin-open-pkg-package (helm-marked-candidates)))))))
 
 (defun helm-catkin-config-blacklist ()
-  "Return a list of all currenty blacklisted packages for the workspace at $EMACS_CATKIN_WS."
+  "Return a list of all currenty blacklisted packages for the workspace."
   (helm-catkin--parse-config "blacklist"))
 
 (defalias 'helm-catkin-config-blacklist-add (apply-partially 'helm-catkin--config-args "--append-args --blacklist")
-  "Mark a list of packages to be blacklisted for the current workspace at $EMACS_CATKIN_WS.")
+  "Mark a list of packages to be blacklisted for the current workspace.")
 
 (defalias 'helm-catkin-config-blacklist-remove (apply-partially 'helm-catkin--config-args "--remove-args --blacklist")
-  "Remove a list of blacklisted packages from the existing blacklist for
-the current workspace at $EMACS_CATKIN_WS. Packages which are currently
-not blacklisted and are requested to be removed don't provoce an error and are just ignored.")
+  "Remove a list of blacklisted packages from the existing blacklist for the current workspace.
+Packages which are currently not blacklisted and are requested to be removed don't provoce an
+error and are just ignored.")
 
 (defvar helm-catkin--helm-source-catkin-config-blacklist
   (helm-build-sync-source "Blacklist"
@@ -397,7 +390,7 @@ not blacklisted and are requested to be removed don't provoce an error and are j
 (defvar helm-catkin-helm-help-string
   "* Catkin
 
-Opens a helm query which shows the current config for the catkin workspace at $EMACS_CATKIN_WS.
+Opens a helm query which shows the current config for the catkin workspace.
 It combines the different arguments into helm sections:
 
 ** Config Sections
@@ -482,7 +475,6 @@ press `C-c ?' in the helm-catkin helm query.
 
 See `helm-catkin-helm-help-string'"
   (interactive)
-  (helm-catkin--setup)
   (helm :buffer "*helm Catkin*"
 
         :sources '(helm-catkin--helm-source-catkin-config-new
@@ -507,10 +499,10 @@ the signal with which the PROCESS finishes."
                                (quit-window (get-buffer-window "*Catkin Build*"))))))
 
 (defun helm-catkin-build-package (&optional pkgs)
-  "Build the catkin workspace at $EMACS_CATKIN_WS after sourcing it's ws.
+  "Build the catkin workspace after sourcing it's ws.
 If PKGS is non-nil, only these packages are built, otherwise all packages in the ws are build."
   (let* ((packages (helm-catkin--util-format-list pkgs " "))
-         (build-command (format "catkin build --workspace %s %s" (getenv helm-catkin--WS) packages))
+         (build-command (format "catkin build --workspace %s %s" (helm-catkin--get-workspace) packages))
          (buffer (get-buffer-create "*Catkin Build*"))
          (process (progn
                     (with-current-buffer "*Catkin Build*" (helm-catkin-mode))
@@ -521,15 +513,14 @@ If PKGS is non-nil, only these packages are built, otherwise all packages in the
       (error "Could not attach process sentinel to \"catkin build\" since no such process is running"))))
 
 (defun helm-catkin-list ()
-  "Return a list of all packages in the workspace at $EMACS_CATKIN_WS."
+  "Return a list of all packages in the current workspace."
   (helm-catkin--util-command-to-list
-   (format "catkin list --workspace %s --unformatted --quiet" (getenv helm-catkin--WS))))
+   (format "catkin list --workspace %s --unformatted --quiet" (helm-catkin--get-workspace))))
 
 (defun helm-catkin-open-file-in (pkg file)
   "Open the file at `$(rospack find pkg)/file'.
 PKG is the name of the ros package and FILE a relative path to it."
   (interactive)
-  (helm-catkin--setup)
   (find-file (format "%s/%s" (helm-catkin--util-absolute-path-of pkg) file)))
 
 (defun helm-catkin-open-pkg-cmakelist (pkgs)
@@ -545,7 +536,6 @@ PKG is the name of the ros package and FILE a relative path to it."
 (defun helm-catkin-open-pkg-dired (pkg)
   "Open the absolute path of PKG in `dired'."
   (interactive)
-  (helm-catkin--setup)
   (dired (helm-catkin--util-absolute-path-of pkg)))
 
 (defvar helm-catkin--helm-catkin-build-help-message
@@ -594,8 +584,7 @@ and whitelist.
   "Prompt the user via a helm dialog to select one or more packages to build.
 
   See `helm-catkin-helm-help-string'"
- (interactive)
-  (helm-catkin--setup)
+  (interactive)
   (helm :buffer "*helm Catkin Build*"
         :sources '(helm-catkin--helm-source-catkin-build-default-source
                    helm-catkin--helm-source-catkin-build-source)))

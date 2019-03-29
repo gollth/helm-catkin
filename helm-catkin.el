@@ -80,7 +80,7 @@ Either return `helm-catkin-workspace' if non-nil or the `default-directory' of t
 (defun helm-catkin--util-command-to-list (command &optional separator)
   "Return each part of the stdout of COMMAND as elements of a list.
 If SEPARATOR is nil, the newline character is used to split stdout."
-  (let ((sep (if separator separator "\n")))
+  (let ((sep (or separator "\n")))
     (with-temp-buffer
       (call-process-shell-command command nil t)
       (ignore-errors (split-string (substring (buffer-string) 0 -1) sep t)))))
@@ -93,7 +93,7 @@ If the package cannot be found this command raises an error."
 
 (defun helm-catkin--util-error-protected-command (cmd)
   (with-temp-buffer
-    (if (file-exists-p "/tmp/.catkin-error") (delete-file "/tmp/.catkin-error"))
+    (when (file-exists-p "/tmp/.catkin-error") (delete-file "/tmp/.catkin-error"))
     (call-process-shell-command cmd
                                 nil
                                 '(t "/tmp/.catkin-error"))
@@ -117,7 +117,7 @@ This can be used to fallback to \"per-buffer\" workspaces."
 (defun helm-catkin-set-workspace (&optional path)
   "Set the current catkin workspace to PATH. If PATH is nil the user is prompted to enter the path."
   (interactive)
-  (let ((ws (if path path (read-directory-name "Set catkin workspace: " (helm-catkin--get-workspace)))))
+  (let ((ws (or path (read-directory-name "Set catkin workspace: " (helm-catkin--get-workspace)))))
     (unless (helm-catkin--is-workspace-initialized ws)
       (when (y-or-n-p (format "Workspace %s seems uninitialized. Initialize now? " ws))
         (helm-catkin-init ws)))

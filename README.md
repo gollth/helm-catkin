@@ -84,7 +84,7 @@ The most general command is `helm-catkin`! This lists the current catkin config 
 | **Make**               | The arguments passed to `make`                                         |
 | **Catkin Make**        | The arguments passed to `catkin_make`                                  |
 | **Whitelist**          | Which packages are whitelisted, i.e. are build exclusively             |
-| **Blacklisted**        | Which packages are blacklisted, i.e. are skipped during build          |
+| **Blacklist**        | Which packages are blacklisted, i.e. are skipped during build          |
 | **Packages**           | The complete set of packages in the current workspace                  |
 
 ### Actions

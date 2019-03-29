@@ -97,12 +97,14 @@ of nil if no match. Can be used to test if a certain change was made between the
   "If the global variable `helm-catkin-workspace' is not set, test if the buffer path is returned"
   (unwind-protect (progn
                     (setq helm-catkin-workspace nil)
-                    (write-region "" nil "/tmp/some-file")
-                    (find-file "/tmp/some-file")
+                    (make-directory "/tmp/ws/" t)
+                    (write-region "" nil "/tmp/ws/some-file")
+                    (helm-catkin-init "/tmp/ws/")
+                    (find-file "/tmp/ws/some-file")
                     (with-current-buffer "some-file"
-                      (should (string= "/tmp" (helm-catkin--get-workspace)))))
-    (kill-buffer "some-file")
-    (delete-file "/tmp/some-file")))
+                      (should (string= "/tmp/ws" (helm-catkin--get-workspace)))))
+    (when (buffer-live-p "some-file") (kill-buffer "some-file"))
+    (when (file-exists-p "/tmp/ws") (delete-directory "/tmp/ws" t))))
 
 (ert-deftest test-helm-catkin--parse-config-raises-without-initialized-workspace ()
   "Test if the parse-config command throws an error when the ws is not initialized"

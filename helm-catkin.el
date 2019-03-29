@@ -58,7 +58,8 @@ Either return `helm-catkin-workspace' if non-nil or the `default-directory' of t
 (defun helm-catkin--parse-config (key)
   (let* ((ws (helm-catkin--get-workspace))
          (path (format "%s/.catkin_tools/profiles/default/config.yaml" ws)))
-    (if (null (file-exists-p path)) (error "Catkin workspace '%s'  seems uninitialized. Use `(helm-catkin-init)' to do that now" ws))
+    (unless (helm-catkin--is-workspace-initialized ws)
+      (error "Catkin workspace '%s' seems uninitialized. Use `(helm-catkin-init)' to do that now" ws))
 
     (ignore-errors
       (with-temp-buffer
@@ -92,7 +93,7 @@ If the package cannot be found this command raises an error."
 
 (defun helm-catkin--util-error-protected-command (cmd)
   (with-temp-buffer
-    (delete-file "/tmp/.catkin-error")
+    (if (file-exists-p "/tmp/.catkin-error") (delete-file "/tmp/.catkin-error"))
     (call-process-shell-command cmd
                                 nil
                                 '(t "/tmp/.catkin-error"))
@@ -109,6 +110,7 @@ If the package cannot be found this command raises an error."
 (defun helm-catkin-no-workspace ()
   "Clear the `helm-catkin-workspace' variable.
 This can be used to fallback to \"per-buffer\" workspaces."
+  (interactive)
   (setq helm-catkin-workspace nil))
 
 ;;;###autoload
@@ -123,20 +125,20 @@ This can be used to fallback to \"per-buffer\" workspaces."
     (message (format "Catkin workspace set to %s" ws))))
 
 ;;;###autoload
-(defun helm-catkin-init (&optional ws)
-  "(Re-)Initialize a catkin workspace at WS.
+(defun helm-catkin-init (&optional path)
+  "(Re-)Initialize a catkin workspace at PATH.
 Creates the folder if it does not exist and also a child 'src' folder."
   (interactive)
-  ;; If current workspace is null, prompt the user for it
-  (let ((ws (if ws ws (helm-catkin--get-workspace))))
+  (let ((ws (or path (helm-catkin--get-workspace))))
+    ;; If current workspace does not yet exist, prompt the user to create it
     (unless (file-exists-p ws)
       (unless (y-or-n-p (format "Path %s does not exist. Create? " ws))
         (error "Cannot initialize workspace `%s' since it doesn't exist" ws))
-      (make-directory (format "%s/src" ws) t)  ; also create parent directiories)
+      (make-directory (format "%s/src" ws) t))  ; also create parent directiories)
     ;; Now that everything should be setup, call catkin config --init
     ;; to create the .catkin_tools/profile/default/config.yaml file
     (call-process-shell-command (format "catkin config --init --workspace %s" ws))
-    (message (format "Catkin workspace initialized successfully at '%s'" ws)))))
+    (message (format "Catkin workspace initialized successfully at '%s'" ws))))
 
 ;;;###autoload
 (defun helm-catkin-clean ()

@@ -464,11 +464,11 @@ The first action [F1] is always the default choice if you just press enter.
 
 ** Tips
 **** Most of the actions above accept multiple items from that section.
-**** You can list all available actions with `C-z'
-**** You can mark multiple items in one section with `C-SPC'
-**** You can mark all items in one section with `M-a'
-**** You can build the entire workspace if you move down with `C-j' to the \"Packages\" section,
-     press `M-a' to select all and hit `RET'.
+**** You can list all available actions with \\[helm-select-action]
+**** You can mark multiple items in one section with \\[helm-toggle-visibility-mark]
+**** You can mark all items in one section with \\[helm-toggle-all-marks]
+**** You can build the entire workspace if you move down with \\[helm-next-source] to the \"Packages\" section,
+     press \\[helm-toggle-all-marks] to select all and hit `RET'.
 
 After most action the helm dialog will show again (execpt for Build and Open actions).
 To quit it just press ESC.")
@@ -567,9 +567,9 @@ and whitelist.
 ** Tips
 **** To adjust the config from the build command use the [F2] on \"[default]\"
 **** Most of the actions above accept multiple items from that section.
-**** You can list all available actions with `C-z'
-**** You can mark multiple items in one section with `C-SPC'
-**** You can mark all items in the \"Packages\" section with `M-a'
+**** You can list all available actions with \\[helm-select-action]
+**** You can mark multiple items in one section with \\[helm-toggle-visibility-mark]
+**** You can mark all items in the \"Packages\" section with \\[helm-toggle-all-marks]
 
 ** Actions:
 **** [F1] Build:                Build the selected package(s)

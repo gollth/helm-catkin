@@ -69,7 +69,7 @@ To query the current workspace use `C-h v RET helm-catkin-workspace RET`.
 ## Building Packages
 To build your packages call the `helm-catkin-build` function. This interactively prompts a [helm](https://emacs-helm.github.io/helm/) with two sections. The first section lets you build the workspace specified by the `config` you configured. The second **Packages** section list all packages in your workspace. Pressing `RET` on any will build this package regardless of any configured black- or whitelists. Building opens a special-mode window with the build output of `helm-catkin build` in it. You can close this window by pressing `q` when the build is done.
 
-> **Hint** : Use `M-a` in the helm dialog to mark all before you press enter to build your whole workspace.
+> **Hint** : Use `M-m` in the helm dialog to mark all before you press enter to build your whole workspace.
 
 ## Configuring the Workspace
 The most general command is `helm-catkin`! This lists the current catkin config of the workspace in a helm dialog. The dialog is structured in sections. Each section contains list arguments which you can edit or remove. If in one section contains no arguments, the section is omitted. For a clean workspace for example you would only see the
@@ -94,8 +94,8 @@ Each section has a distinct set of actions for each item. Some actions do make s
 - Most of the actions above accept multiple items from that section.
 - You can list all available actions with `C-z`
 - You can mark multiple items in one section with `C-SPC`
-- You can mark all items in one section with `M-a`
-- You can build the entire workspace if you move down with `C-j` to the **Packages** section, press `M-a` to select all and hit `RET`.
+- You can mark all items in one section with `M-m`
+- You can build the entire workspace if you move down with `C-h` to the **Packages** section, press `M-m` to select all and hit `RET`.
 
 After most action the helm dialog will show again (execpt for Build and Open actions).
 To quit it just press ESC.")

@@ -202,18 +202,23 @@ This function can be used to set args of a certain type like so:
   "Return a list of all currenty set cmake args for the workspace."
   (helm-catkin--parse-config "cmake_args"))
 
-(defalias 'helm-catkin-config-cmake-args-clear (apply-partially 'helm-catkin--config-args "--no-cmake-args")
-  "Removes all cmake args for the current workspace")
+(defun helm-catkin-config-cmake-args-clear ()
+  "Removes all cmake args for the current workspace"
+  (helm-catkin--config-args "--no-cmake-args"))
 
-(defalias 'helm-catkin-config-cmake-args-set (apply-partially 'helm-catkin--config-args "--cmake-args")
-  "Sets a list of cmake args for the current workspace. Passing an empty list to ARGS will clear all currently set args.")
+(defun helm-catkin-config-cmake-args-set (args)
+  "Sets a list of cmake ARGS for the current workspace.
+Passing an empty list to ARGS will clear all currently set cmake arguments."
+  (helm-catkin--config-args "--cmake-args" args))
 
-(defalias 'helm-catkin-config-cmake-args-add (apply-partially 'helm-catkin--config-args "--append-args --cmake-args")
-  "Adds a list of cmake args to the existing set of cmake args for the current workspace.")
+(defun helm-catkin-config-cmake-args-add (args)
+  "Adds a list of cmake ARGS to the existing set of cmake arguments for the current workspace."
+  (helm-catkin--config-args "--append-args --cmake-args" args))
 
-(defalias 'helm-catkin-config-cmake-args-remove (apply-partially 'helm-catkin--config-args "--remove-args --cmake-args")
-  "Removes a list of cmake args from the existing set of cmake args for the current workspace.
-Args which are currently not set and are requested to be removed don't provoce an error and are just ignored.")
+(defun helm-catkin-config-cmake-args-remove (args)
+  "Removes a list of cmake ARGS from the existing set of cmake arguments for the current workspace.
+ARGS which are currently not set and are requested to be removed don't provoce an error and are just ignored."
+  (helm-catkin--config-args "--remove-args --cmake-args" args))
 
 (defun helm-catkin-config-cmake-change (arg)
   "Prompt the user to enter a new value for a CMake arg.
@@ -242,19 +247,24 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
   "Return a list of all currenty set make args for the current workspace."
   (append (helm-catkin--parse-config "make_args") (helm-catkin--parse-config "jobs_args")))
 
-(defalias 'helm-catkin-config-make-args-clear (apply-partially 'helm-catkin--config-args "--no-make-args")
-  "Remove all make args for the current workspace.")
-(defalias 'helm-catkin-config-make-args-set (apply-partially 'helm-catkin--config-args "--make-args")
-  "Set a list of make args for the current workspace.
-Passing an empty list to ARGS will clear all currently set args.")
+(defun helm-catkin-config-make-args-clear ()
+  "Remove all make args for the current workspace."
+  (helm-catkin--config-args "--no-make-args"))
 
-(defalias 'helm-catkin-config-make-args-add (apply-partially 'helm-catkin--config-args "--append-args --make-args")
-  "Add a list of make args to the existing set of make args for the current workspace.")
+(defun helm-catkin-config-make-args-set (args)
+  "Set a list of make ARGS for the current workspace.
+Passing an empty list to ARGS will clear all currently set args."
+  (helm-catkin--config-args "--make-args" args))
 
-(defalias 'helm-catkin-config-make-args-remove (apply-partially 'helm-catkin--config-args "--remove-args --make-args")
-  "Remove a list of make args from the existing set of make args for the current workspace.
-Args which are currently not set and are requested to be removed don't provoce an error and
-are just ignored.")
+(defun helm-catkin-config-make-args-add (args)
+  "Add a list of make ARGS to the existing set of make args for the current workspace."
+  (helm-catkin--config-args "--append-args --make-args" args))
+
+(defun helm-catkin-config-make-args-remove (args)
+  "Remove a list of make ARGS from the existing set of make arguments for the current workspace.
+ARGS which are currently not set and are requested to be removed don't provoce an error and
+are just ignored."
+  (helm-catkin--config-args "--remove-args --make-args" args))
 
 (defun helm-catkin-config-make-change (arg)
   "Prompt the user to enter a new value for a Make arg.
@@ -283,22 +293,26 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
   "Return a list of all currenty set catkin-make args for the current workspace."
   (helm-catkin--parse-config "catkin_make_args"))
 
-(defalias 'helm-catkin-config-catkin-make-args-clear (apply-partially 'helm-catkin--config-args "--no-catkin-make-args")
-  "Remove all catkin-make args for the current workspace.")
+(defun helm-catkin-config-catkin-make-args-clear ()
+  "Remove all catkin-make ARGS for the current workspace."
+  (helm-catkin--config-args "--no-catkin-make-args"))
 
-(defalias 'helm-catkin-config-catkin-make-args-set (apply-partially 'helm-catkin--config-args "--catkin-make-args")
-  "Set a list of catkin-make args for the current workspace.
-Passing an empty list to ARGS will clear all currently set args.")
+(defun helm-catkin-config-catkin-make-args-set (args)
+  "Set a list of catkin-make ARGS for the current workspace.
+Passing an empty list to ARGS will clear all currently set arguments."
+  (helm-catkin--config-args "--catkin-make-args" args))
 
-(defalias 'helm-catkin-config-catkin-make-args-add (apply-partially 'helm-catkin--config-args "--append-args --catkin-make-args")
-  "Add a list of catkin-make args to the existing set of catkin-make args for the current workspace.")
+(defun helm-catkin-config-catkin-make-args-add (args)
+  "Add a list of catkin-make ARGS to the existing set of catkin-make ARGS for the current workspace."
+  (helm-catkin--config-args "--append-args --catkin-make-args" args))
 
-(defalias 'helm-catkin-config-catkin-make-args-remove (apply-partially 'helm-catkin--config-args "--remove-args --catkin-make-args")
-  "Remove a list of catkin-make args from the existing set of catkin-make args for the current workspace.
-Args which are currently not set and are requested to be removed don't provoce an error and are just ignored.")
+(defun helm-catkin-config-catkin-make-args-remove (args)
+  "Remove a list of catkin-make ARGS from the existing set of catkin make arguments for the current workspace.
+ARGS which are currently not set and are requested to be removed don't provoce an error and are just ignored."
+  (helm-catkin--config-args "--remove-args --catkin-make-args" args))
 
 (defun helm-catkin-config-catkin-make-change (arg)
-  "Prompt the user to enter a new value for a Catkin-Make arg.
+  "Prompt the user to enter a new value for a catkin make argument.
 The prompt in the minibuffer is autofilled with ARG and the new entered value will be returned."
   (interactive)
   (let ((new-arg (helm-read-string "Adjust value for Catkin-Make Arg: " arg)))
@@ -324,13 +338,15 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
   "Return a list of all currenty whitelisted packages for the current workspace."
   (helm-catkin--parse-config "whitelist"))
 
-(defalias 'helm-catkin-config-whitelist-add (apply-partially 'helm-catkin--config-args "--append-args --whitelist")
-  "Mark a list of packages to be whitelisted for the current workspace.")
+(defun helm-catkin-config-whitelist-add (packages)
+  "Mark a list of PACKAGES to be whitelisted for the current workspace."
+  (helm-catkin--config-args "--append-args --whitelist" packages))
 
-(defalias 'helm-catkin-config-whitelist-remove (apply-partially 'helm-catkin--config-args "--remove-args --whitelist")
-  "Remove a list of whitelisted packages from the existing whitelist for
+(defun helm-catkin-config-whitelist-remove (packages)
+  "Remove a list of whitelisted PACKAGES from the existing whitelist for
 the current workspace. Packages which are currently not whitelisted and
-are requested to be removed don't provoce an error and are just ignored.")
+are requested to be removed don't provoce an error and are just ignored."
+  (helm-catkin--config-args "--remove-args --whitelist" packages))
 
 (defvar helm-catkin--helm-source-catkin-config-whitelist
   (helm-build-sync-source "Whitelist"
@@ -346,13 +362,15 @@ are requested to be removed don't provoce an error and are just ignored.")
   "Return a list of all currenty blacklisted packages for the workspace."
   (helm-catkin--parse-config "blacklist"))
 
-(defalias 'helm-catkin-config-blacklist-add (apply-partially 'helm-catkin--config-args "--append-args --blacklist")
-  "Mark a list of packages to be blacklisted for the current workspace.")
+(defun helm-catkin-config-blacklist-add (packages)
+  "Mark a list of PACKAGEs to be blacklisted for the current workspace."
+  (helm-catkin--config-args "--append-args --blacklist" packages))
 
-(defalias 'helm-catkin-config-blacklist-remove (apply-partially 'helm-catkin--config-args "--remove-args --blacklist")
-  "Remove a list of blacklisted packages from the existing blacklist for the current workspace.
+(defun helm-catkin-config-blacklist-remove (packages)
+  "Remove a list of blacklisted PACKAGES from the existing blacklist for the current workspace.
 Packages which are currently not blacklisted and are requested to be removed don't provoce an
-error and are just ignored.")
+error and are just ignored."
+  (helm-catkin--config-args "--remove-args --blacklist" packages))
 
 (defvar helm-catkin--helm-source-catkin-config-blacklist
   (helm-build-sync-source "Blacklist"

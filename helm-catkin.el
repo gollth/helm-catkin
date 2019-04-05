@@ -490,7 +490,6 @@ press `C-c ?' in the helm-catkin helm query.
 See `helm-catkin-helm-help-string'"
   (interactive)
   (helm :buffer "*helm Catkin*"
-
         :sources '(helm-catkin--helm-source-catkin-config-new
                    helm-catkin--helm-source-catkin-config-cmake
                    helm-catkin--helm-source-catkin-config-make
@@ -539,12 +538,12 @@ PKG is the name of the ros package and FILE a relative path to it."
 
 (defun helm-catkin-open-pkg-cmakelist (pkgs)
   "Open the `CMakeLists.txt' file for each of the package names within PKGS."
-  (loop for pkg in pkgs
+  (cl-loop for pkg in pkgs
         do (helm-catkin-open-file-in pkg "CMakeLists.txt")))
 
 (defun helm-catkin-open-pkg-package (pkgs)
   "Open the `package.xml' file for each of the package names within PKGS."
-  (loop for pkg in pkgs
+  (cl-loop for pkg in pkgs
         do (helm-catkin-open-file-in pkg "package.xml")))
 
 (defun helm-catkin-open-pkg-dired (pkg)

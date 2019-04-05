@@ -18,7 +18,7 @@
 
 ;; Besides adjusting the config, you can build the ROS packages in the workspace in a colored build buffer.
 
-;; All `helm-catkin' functions require a workspace defined. This is saved in a global lisp
+;; All `helm-catkin' functions require a workspace defined. This is saved in a global Lisp
 ;; variable called `helm-catkin-workspace'. Easiest way is to specify a workspace is by calling
 ;; the interactive function `helm-catkin-set-workspace' which asks you to enter a path to your
 ;; workspace. This command can also be used to change between different workspaces.
@@ -44,7 +44,7 @@
 
 (define-derived-mode helm-catkin-mode special-mode "Catkin")
 
-(setq helm-catkin-workspace nil)
+(defvar helm-catkin-workspace)
 
 
 (defun helm-catkin--get-workspace ()
@@ -85,11 +85,13 @@ If SEPARATOR is nil, the newline character is used to split stdout."
       (call-process-shell-command command nil t)
       (ignore-errors (split-string (substring (buffer-string) 0 -1) sep t)))))
 
+(helm-catkin--util-absolute-path-of "pkg1")
+
 (defun helm-catkin--util-absolute-path-of (pkg)
   "Return the absolute path of PKG by calling \"rospack find ...\".
 If the package cannot be found this command raises an error."
-  (substring(helm-catkin--util-error-protected-command
-   (format "catkin locate --quiet --workspace %s %s" (helm-catkin--get-workspace) pkg))))
+  (substring (helm-catkin--util-error-protected-command
+   (format "catkin locate --quiet --workspace %s %s" (helm-catkin--get-workspace) pkg)) 0 -1))
 
 (defun helm-catkin--util-error-protected-command (cmd)
   (with-temp-buffer
@@ -203,20 +205,20 @@ This function can be used to set args of a certain type like so:
   (helm-catkin--parse-config "cmake_args"))
 
 (defun helm-catkin-config-cmake-args-clear ()
-  "Removes all cmake args for the current workspace"
+  "Remove all cmake args for the current workspace."
   (helm-catkin--config-args "--no-cmake-args"))
 
 (defun helm-catkin-config-cmake-args-set (args)
-  "Sets a list of cmake ARGS for the current workspace.
+  "Set a list of cmake ARGS for the current workspace.
 Passing an empty list to ARGS will clear all currently set cmake arguments."
   (helm-catkin--config-args "--cmake-args" args))
 
 (defun helm-catkin-config-cmake-args-add (args)
-  "Adds a list of cmake ARGS to the existing set of cmake arguments for the current workspace."
+  "Add a list of cmake ARGS to the existing set of cmake arguments for the current workspace."
   (helm-catkin--config-args "--append-args --cmake-args" args))
 
 (defun helm-catkin-config-cmake-args-remove (args)
-  "Removes a list of cmake ARGS from the existing set of cmake arguments for the current workspace.
+  "Remove a list of cmake ARGS from the existing set of cmake arguments for the current workspace.
 ARGS which are currently not set and are requested to be removed don't provoce an error and are just ignored."
   (helm-catkin--config-args "--remove-args --cmake-args" args))
 
@@ -343,9 +345,9 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
   (helm-catkin--config-args "--append-args --whitelist" packages))
 
 (defun helm-catkin-config-whitelist-remove (packages)
-  "Remove a list of whitelisted PACKAGES from the existing whitelist for
-the current workspace. Packages which are currently not whitelisted and
-are requested to be removed don't provoce an error and are just ignored."
+  "Remove a list of whitelisted PACKAGES from the existing whitelist for the current workspace.
+Packages which are currently not whitelisted and are requested to be removed don't provoce
+an error and are just ignored."
   (helm-catkin--config-args "--remove-args --whitelist" packages))
 
 (defvar helm-catkin--helm-source-catkin-config-whitelist
@@ -363,7 +365,7 @@ are requested to be removed don't provoce an error and are just ignored."
   (helm-catkin--parse-config "blacklist"))
 
 (defun helm-catkin-config-blacklist-add (packages)
-  "Mark a list of PACKAGEs to be blacklisted for the current workspace."
+  "Mark a list of PACKAGES to be blacklisted for the current workspace."
   (helm-catkin--config-args "--append-args --blacklist" packages))
 
 (defun helm-catkin-config-blacklist-remove (packages)

@@ -1,5 +1,4 @@
 (load-file "helm-catkin.el")
-(require 'el-mock)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;       Helper functions for Testing & Util tests                        ;;

@@ -53,7 +53,11 @@ Either return `helm-catkin-workspace' if non-nil or the `default-directory' of t
   (helm-catkin--util-error-protected-command
    (format "catkin locate --workspace %s"
            ;; catkin locate crashes on trailing slashes, make sure to remove it accordingly
-           (substring (file-name-as-directory (or helm-catkin-workspace default-directory)) 0 -1))))
+           (shell-quote-argument
+            (substring
+             (file-name-as-directory
+              (or helm-catkin-workspace default-directory))
+             0 -1)))))
 
 (defun helm-catkin--parse-config (key)
   (let* ((ws (helm-catkin--get-workspace))
@@ -91,7 +95,10 @@ If SEPARATOR is nil, the newline character is used to split stdout."
   "Return the absolute path of PKG by calling \"rospack find ...\".
 If the package cannot be found this command raises an error."
   (substring (helm-catkin--util-error-protected-command
-   (format "catkin locate --quiet --workspace %s %s" (helm-catkin--get-workspace) pkg)) 0 -1))
+              (format "catkin locate --quiet --workspace %s %s"
+                      (shell-quote-argument (helm-catkin--get-workspace))
+                      pkg))
+             0 -1))
 
 (defun helm-catkin--util-error-protected-command (cmd)
   (with-temp-buffer
@@ -139,7 +146,8 @@ Creates the folder if it does not exist and also a child 'src' folder."
       (make-directory (format "%s/src" ws) t))  ; also create parent directiories)
     ;; Now that everything should be setup, call catkin config --init
     ;; to create the .catkin_tools/profile/default/config.yaml file
-    (call-process-shell-command (format "catkin config --init --workspace %s" ws))
+    (call-process-shell-command (format "catkin config --init --workspace %s"
+                                        (shell-quote-argument ws)))
     (message (format "Catkin workspace initialized successfully at '%s'" ws))))
 
 ;;;###autoload
@@ -148,13 +156,14 @@ Creates the folder if it does not exist and also a child 'src' folder."
   (interactive)
   (let ((ws (helm-catkin--get-workspace)))
     (when (y-or-n-p (format "Clean workspace at '%s'? " ws))
-      (call-process-shell-command (format "catkin clean --workspace %s -y" ws)))))
+      (call-process-shell-command (format "catkin clean --workspace %s -y"
+                                          (shell-quote-argument ws))))))
 
 (defun helm-catkin--source (command)
   "Prepend a `source $WS/devel/setup.bash &&' before COMMAND if such a file exists.
 Otherwise leave COMMAND untouched."
   (let* ((ws (helm-catkin--get-workspace))
-         (setup-file (format "%s/devel/setup.bash" ws)))
+         (setup-file (format "%s/devel/setup.bash" (shell-quote-argument ws))))
     (if (file-exists-p setup-file)
         (format "source %s && %s" setup-file command)
       command)))
@@ -168,7 +177,7 @@ The config goes to a new buffer called *Catkin Config*. This can be dismissed by
   (erase-buffer)
   ;; Pipe stderr to null to supress "could not determine width" warning
   (call-process-shell-command (format "catkin --force-color config --workspace %s 2> /dev/null"
-                                      (helm-catkin--get-workspace)) nil t)
+                                      (shell-quote-argument (helm-catkin--get-workspace))) nil t)
   (xterm-color-colorize-buffer)
   (helm-catkin-mode))        ; set this buffer to be dissmissable with "Q"
 
@@ -192,9 +201,9 @@ This function can be used to set args of a certain type like so:
       (substring
        (call-process-shell-command
         (format "catkin config --workspace %s %s %s"
-                (helm-catkin--get-workspace)
+                (shell-quote-argument (helm-catkin--get-workspace))
                 operation
-                arg-string))
+                (shell-quote-argument arg-string)))
        0 -1))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -517,7 +526,9 @@ the signal with which the PROCESS finishes."
   "Build the catkin workspace after sourcing it's ws.
 If PKGS is non-nil, only these packages are built, otherwise all packages in the ws are build."
   (let* ((packages (helm-catkin--util-format-list pkgs " "))
-         (build-command (format "catkin build --workspace %s %s" (helm-catkin--get-workspace) packages))
+         (build-command (format "catkin build --workspace %s %s"
+                                (shell-quote-argument (helm-catkin--get-workspace))
+                                packages))
          (buffer (get-buffer-create "*Catkin Build*"))
          (process (progn
                     (with-current-buffer "*Catkin Build*" (helm-catkin-mode))
@@ -530,7 +541,8 @@ If PKGS is non-nil, only these packages are built, otherwise all packages in the
 (defun helm-catkin-list ()
   "Return a list of all packages in the current workspace."
   (helm-catkin--util-command-to-list
-   (format "catkin list --workspace %s --unformatted --quiet" (helm-catkin--get-workspace))))
+   (format "catkin list --workspace %s --unformatted --quiet"
+           (shell-quote-argument (helm-catkin--get-workspace)))))
 
 (defun helm-catkin-open-file-in (pkg file)
   "Open the file at `$(rospack find pkg)/file'.

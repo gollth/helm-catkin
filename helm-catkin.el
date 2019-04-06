@@ -123,10 +123,10 @@ This can be used to fallback to \"per-buffer\" workspaces."
   (setq helm-catkin-workspace nil))
 
 ;;;###autoload
-(defun helm-catkin-set-workspace (&optional path)
-  "Set the current catkin workspace to PATH. If PATH is nil the user is prompted to enter the path."
+(defun helm-catkin-set-workspace ()
+  "Prompt to set the current catkin workspace to `helm-catkin-workspace'."
   (interactive)
-  (let ((ws (or path (read-directory-name "Set catkin workspace: " (helm-catkin--get-workspace)))))
+  (let ((ws (read-directory-name "Set catkin workspace: " helm-catkin-workspace)))
     (unless (helm-catkin--is-workspace-initialized ws)
       (when (y-or-n-p (format "Workspace %s seems uninitialized. Initialize now? " ws))
         (helm-catkin-init ws)))
@@ -136,9 +136,11 @@ This can be used to fallback to \"per-buffer\" workspaces."
 ;;;###autoload
 (defun helm-catkin-init (&optional path)
   "(Re-)Initialize a catkin workspace at PATH.
+If PATH is nil tries to initialize `helm-catkin-workspace'. If this is
+also nil, the folder containing the current buffer will be used as workspace.
 Creates the folder if it does not exist and also a child 'src' folder."
   (interactive)
-  (let ((ws (or path (helm-catkin--get-workspace))))
+  (let ((ws (or path helm-catkin-workspace default-directory)))
     ;; If current workspace does not yet exist, prompt the user to create it
     (unless (file-exists-p ws)
       (unless (y-or-n-p (format "Path %s does not exist. Create? " ws))

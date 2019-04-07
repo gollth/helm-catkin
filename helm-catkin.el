@@ -89,8 +89,6 @@ If SEPARATOR is nil, the newline character is used to split stdout."
       (call-process-shell-command command nil t)
       (ignore-errors (split-string (substring (buffer-string) 0 -1) sep t)))))
 
-(helm-catkin--util-absolute-path-of "pkg1")
-
 (defun helm-catkin--util-absolute-path-of (pkg)
   "Return the absolute path of PKG by calling \"rospack find ...\".
 If the package cannot be found this command raises an error."

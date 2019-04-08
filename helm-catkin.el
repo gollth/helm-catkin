@@ -203,7 +203,7 @@ This function can be used to set args of a certain type like so:
         (format "catkin config --workspace %s %s %s"
                 (shell-quote-argument (helm-catkin--get-workspace))
                 operation
-                (shell-quote-argument arg-string)))
+                arg-string))
        0 -1))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

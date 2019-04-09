@@ -44,20 +44,17 @@
 
 (define-derived-mode helm-catkin-mode special-mode "Catkin")
 
-(defvar helm-catkin-workspace)
-
+(defvar helm-catkin-workspace nil)
 
 (defun helm-catkin--get-workspace ()
-  "Find the catkin workspace.
-Either return `helm-catkin-workspace' if non-nil or the `default-directory' of the current buffer."
-  (helm-catkin--util-error-protected-command
-   (format "catkin locate --workspace %s"
-           ;; catkin locate crashes on trailing slashes, make sure to remove it accordingly
-           (shell-quote-argument
-            (substring
-             (file-name-as-directory
-              (or helm-catkin-workspace default-directory))
-             0 -1)))))
+  "Find the path of/in a catkin workspace. This is either `helm-catkin-workspace' if
+this is set, or the `default-directory' of the current buffer. In both cases any
+trailing slashes are removed."
+  (setq ws (or helm-catkin-workspace default-directory))
+  (setq root (expand-file-name (locate-dominating-file ws ".catkin_tools")))
+  (unless root (error (format "Cannot find catkin workspace at/above \"%s\" (.catkin_tools folder not found)" ws)))
+  ;; catkin locate crashes on trailing slashes, make sure to remove it accordingly
+  (substring (file-name-as-directory root) 0 -1))
 
 (defun helm-catkin--parse-config (key)
   (let* ((ws (helm-catkin--get-workspace))
@@ -90,13 +87,11 @@ If SEPARATOR is nil, the newline character is used to split stdout."
       (ignore-errors (split-string (substring (buffer-string) 0 -1) sep t)))))
 
 (defun helm-catkin--util-absolute-path-of (pkg)
-  "Return the absolute path of PKG by calling \"rospack find ...\".
+  "Return the absolute path of PKG by calling \"catkin locate ...\".
 If the package cannot be found this command raises an error."
-  (substring (helm-catkin--util-error-protected-command
+  (helm-catkin--util-error-protected-command
               (format "catkin locate --quiet --workspace %s %s"
-                      (shell-quote-argument (helm-catkin--get-workspace))
-                      pkg))
-             0 -1))
+                      (shell-quote-argument (helm-catkin--get-workspace)) pkg)))
 
 (defun helm-catkin--util-error-protected-command (cmd)
   (with-temp-buffer
@@ -138,7 +133,7 @@ If PATH is nil tries to initialize `helm-catkin-workspace'. If this is
 also nil, the folder containing the current buffer will be used as workspace.
 Creates the folder if it does not exist and also a child 'src' folder."
   (interactive)
-  (let ((ws (or path helm-catkin-workspace default-directory)))
+  (let ((ws (or path (helm-catkin--get-workspace))))
     ;; If current workspace does not yet exist, prompt the user to create it
     (unless (file-exists-p ws)
       (unless (y-or-n-p (format "Path %s does not exist. Create? " ws))

@@ -246,8 +246,8 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
   (helm-build-sync-source "CMake"
     :candidates 'helm-catkin-config-cmake-args
     :help-message 'helm-catkin--helm-source-catkin-config-cmake-helm-message
-    :action '(("Change" . (lambda (x) (helm-catkin-config-cmake-change x) (helm-catkin)))
-              ("Remove" . (lambda (_) (helm-catkin-config-cmake-args-remove (helm-marked-candidates)) (helm-catkin))))))
+    :action '(("Change" . (lambda (x) (helm-catkin-config-cmake-change x) (helm-resume)))
+              ("Remove" . (lambda (_) (helm-catkin-config-cmake-args-remove (helm-marked-candidates)) (helm-resume))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                   MAKE Args                                ;;
@@ -292,8 +292,8 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
   (helm-build-sync-source "Make"
     :candidates 'helm-catkin-config-make-args
     :help-message 'helm-catkin--helm-source-catkin-config-make-helm-message
-    :action '(("Change" . (lambda (x) (helm-catkin-config-make-change x) (helm-catkin)))
-              ("Remove" . (lambda (_) (helm-catkin-config-make-args-remove (helm-marked-candidates)) (helm-catkin))))))
+    :action '(("Change" . (lambda (x) (helm-catkin-config-make-change x) (helm-resume)))
+              ("Remove" . (lambda (_) (helm-catkin-config-make-args-remove (helm-marked-candidates)) (helm-resume))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                   CATKIN-MAKE Args                         ;;
@@ -337,8 +337,8 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
   (helm-build-sync-source "Catkin-Make"
     :candidates 'helm-catkin-config-catkin-make-args
     :help-message 'helm-catkin--helm-source-catkin-config-catkin-make-helm-message
-    :action '(("Change" . (lambda (x) (helm-catkin-config-catkin-make-change x) (helm-catkin)))
-              ("Remove" . (lambda (_) (helm-catkin-config-catkin-make-args-remove (helm-marked-candidates)) (helm-catkin))))))
+    :action '(("Change" . (lambda (x) (helm-catkin-config-catkin-make-change x) (helm-resume)))
+              ("Remove" . (lambda (_) (helm-catkin-config-catkin-make-args-remove (helm-marked-candidates)) (helm-resume))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                   Whitelist/Blacklist                      ;;
@@ -361,7 +361,7 @@ an error and are just ignored."
   (helm-build-sync-source "Whitelist"
     :candidates 'helm-catkin-config-whitelist
     :help-message 'helm-catkin--helm-source-catkin-config-whitelist-helm-message
-    :action '(("Un-Whitelist" . (lambda (_) (helm-catkin-config-whitelist-remove (helm-marked-candidates)) (helm-catkin)))
+    :action '(("Un-Whitelist" . (lambda (_) (helm-catkin-config-whitelist-remove (helm-marked-candidates)) (helm-resume)))
               ("Build" . (lambda (_) (helm-catkin-build-package (helm-marked-candidates))))
               ("Open Folder" . helm-catkin-open-pkg-dired)
               ("Open CMakeLists.txt" . (lambda (c) (helm-catkin-open-pkg-cmakelist (helm-marked-candidates))))
@@ -385,7 +385,7 @@ error and are just ignored."
   (helm-build-sync-source "Blacklist"
     :candidates 'helm-catkin-config-blacklist
     :help-message 'helm-catkin--helm-source-catkin-config-blacklist-help-message
-    :action '(("Un-Blacklist" . (lambda (_) (helm-catkin-config-blacklist-remove (helm-marked-candidates)) (helm-catkin)))
+    :action '(("Un-Blacklist" . (lambda (_) (helm-catkin-config-blacklist-remove (helm-marked-candidates)) (helm-resume)))
               ("Build" . (lambda (_) (helm-catkin-build-package (helm-marked-candidates))))
               ("Open Folder" . helm-catkin-open-pkg-dired)
               ("Open CMakeLists.txt" . (lambda (c) (helm-catkin-open-pkg-cmakelist (helm-marked-candidates))))
@@ -400,7 +400,7 @@ error and are just ignored."
                                           ((string= name "Make Arg")        (helm-catkin-config-make-new ""))
                                           ((string= name "Catkin Make Arg") (helm-catkin-config-catkin-make-new ""))
                                           )
-                                    (helm-catkin))))))
+                                    (helm-resume))))))
 
 (defvar helm-catkin--helm-source-catkin-config-packages
   (helm-build-sync-source "Packages"
@@ -410,8 +410,8 @@ error and are just ignored."
               ("Open Folder" . helm-catkin-open-pkg-dired)
               ("Open CMakeLists.txt" . (lambda (c) (helm-catkin-open-pkg-cmakelist (helm-marked-candidates))))
               ("Open package.xml" . (lambda (c) (helm-catkin-open-pkg-package (helm-marked-candidates))))
-              ("Blacklist" . (lambda (_) (helm-catkin-config-blacklist-add (helm-marked-candidates)) (helm-catkin)))
-              ("Whitelist" . (lambda (_) (helm-catkin-config-whitelist-add (helm-marked-candidates)) (helm-catkin))))))
+              ("Blacklist" . (lambda (_) (helm-catkin-config-blacklist-add (helm-marked-candidates)) (helm-resume)))
+              ("Whitelist" . (lambda (_) (helm-catkin-config-whitelist-add (helm-marked-candidates)) (helm-resume))))))
 
 (defvar helm-catkin-helm-help-string
   "* Catkin
@@ -603,6 +603,7 @@ and whitelist.
 
 (defvar helm-catkin--helm-source-catkin-build-source
   (helm-build-sync-source "Packages"
+    s
     :candidates 'helm-catkin-list
     :help-message 'helm-catkin--helm-catkin-build-help-message
     :action '(("Build"               . (lambda (c) (helm-catkin-build-package (helm-marked-candidates))))

@@ -45,6 +45,9 @@
 (define-derived-mode helm-catkin-mode special-mode "Catkin")
 
 (defvar helm-catkin-workspace nil)
+(defvar helm-catkin-build-success-hook)
+(defvar helm-catkin-build-error-hook)
+(defvar helm-catkin-build-done-hook)
 
 (defun helm-catkin--get-workspace ()
   "Find the path of/in a catkin workspace. This is either `helm-catkin-workspace' if
@@ -506,16 +509,22 @@ See `helm-catkin-helm-help-string'"
 
 (defun helm-catkin--build-finished (process signal)
   "This get called, once the catkin build command finishes.
-It marks the buffer as read-only and asks to close the window.
+It marks the buffer as read-only and closes the window on `q'.
 PROCESS is the process which runs the build command and SIGNAL
 the signal with which the PROCESS finishes."
   (when (memq (process-status process) '(exit signal))
+    (setq window (get-buffer-window "*Catkin Build*"))
+    (shell-command-sentinel process signal)
     (message "Catkin build done!")
-    (other-window 1)      ; select the first "other" window, i.e. the build window
-    (read-only-mode)      ; mark as not-editable
-    (local-set-key (kbd "q") (lambda ()
-                               (interactive)
-                               (quit-window (get-buffer-window "*Catkin Build*"))))))
+    (select-window window)      ; select the the build window
+    (read-only-mode)            ; mark it as not-editable
+    (local-set-key (kbd "q") (lambda () (interactive) (quit-window window)))
+
+    ;; Run hooks according to build result
+    (run-hooks 'helm-catkin-build-done-hook)
+    (if (string-prefix-p "finished" signal)
+        (run-hooks 'helm-catkin-build-success-hook)
+      (run-hooks 'helm-catkin-build-error-hook))))
 
 (defun helm-catkin-build-package (&optional pkgs)
   "Build the catkin workspace after sourcing it's ws.

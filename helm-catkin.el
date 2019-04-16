@@ -44,20 +44,20 @@
 
 (define-derived-mode helm-catkin-mode special-mode "Catkin")
 
-(defvar helm-catkin-workspace)
-
+(defvar helm-catkin-workspace nil)
+(defvar helm-catkin-build-success-hook)
+(defvar helm-catkin-build-error-hook)
+(defvar helm-catkin-build-done-hook)
 
 (defun helm-catkin--get-workspace ()
-  "Find the catkin workspace.
-Either return `helm-catkin-workspace' if non-nil or the `default-directory' of the current buffer."
-  (helm-catkin--util-error-protected-command
-   (format "catkin locate --workspace %s"
-           ;; catkin locate crashes on trailing slashes, make sure to remove it accordingly
-           (shell-quote-argument
-            (substring
-             (file-name-as-directory
-              (or helm-catkin-workspace default-directory))
-             0 -1)))))
+  "Find the path of/in a catkin workspace. This is either `helm-catkin-workspace' if
+this is set, or the `default-directory' of the current buffer. In both cases any
+trailing slashes are removed."
+  (setq ws (or helm-catkin-workspace default-directory))
+  (setq root (expand-file-name (locate-dominating-file ws ".catkin_tools")))
+  (unless root (error (format "Cannot find catkin workspace at/above \"%s\" (.catkin_tools folder not found)" ws)))
+  ;; catkin locate crashes on trailing slashes, make sure to remove it accordingly
+  (substring (file-name-as-directory root) 0 -1))
 
 (defun helm-catkin--parse-config (key)
   (let* ((ws (helm-catkin--get-workspace))
@@ -90,13 +90,11 @@ If SEPARATOR is nil, the newline character is used to split stdout."
       (ignore-errors (split-string (substring (buffer-string) 0 -1) sep t)))))
 
 (defun helm-catkin--util-absolute-path-of (pkg)
-  "Return the absolute path of PKG by calling \"rospack find ...\".
+  "Return the absolute path of PKG by calling \"catkin locate ...\".
 If the package cannot be found this command raises an error."
-  (substring (helm-catkin--util-error-protected-command
+  (helm-catkin--util-error-protected-command
               (format "catkin locate --quiet --workspace %s %s"
-                      (shell-quote-argument (helm-catkin--get-workspace))
-                      pkg))
-             0 -1))
+                      (shell-quote-argument (helm-catkin--get-workspace)) pkg)))
 
 (defun helm-catkin--util-error-protected-command (cmd)
   (with-temp-buffer
@@ -138,7 +136,7 @@ If PATH is nil tries to initialize `helm-catkin-workspace'. If this is
 also nil, the folder containing the current buffer will be used as workspace.
 Creates the folder if it does not exist and also a child 'src' folder."
   (interactive)
-  (let ((ws (or path helm-catkin-workspace default-directory)))
+  (let ((ws (or path (helm-catkin--get-workspace))))
     ;; If current workspace does not yet exist, prompt the user to create it
     (unless (file-exists-p ws)
       (unless (y-or-n-p (format "Path %s does not exist. Create? " ws))
@@ -203,32 +201,39 @@ This function can be used to set args of a certain type like so:
         (format "catkin config --workspace %s %s %s"
                 (shell-quote-argument (helm-catkin--get-workspace))
                 operation
-                (shell-quote-argument arg-string)))
+                arg-string))
        0 -1))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                  CMAKE Args                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(setq helm-catkin--cmake-cache nil)
 (defun helm-catkin-config-cmake-args ()
   "Return a list of all currenty set cmake args for the workspace."
-  (helm-catkin--parse-config "cmake_args"))
+  (if helm-catkin--cmake-cache helm-catkin--cmake-cache
+    (setq helm-catkin--cmake-cache
+          (helm-catkin--parse-config "cmake_args"))))
 
 (defun helm-catkin-config-cmake-args-clear ()
   "Remove all cmake args for the current workspace."
+  (setq helm-catkin--cmake-cache nil)  ; invalidate
   (helm-catkin--config-args "--no-cmake-args"))
 
 (defun helm-catkin-config-cmake-args-set (args)
   "Set a list of cmake ARGS for the current workspace.
 Passing an empty list to ARGS will clear all currently set cmake arguments."
+  (setq helm-catkin--cmake-cache nil)  ; invalidate
   (helm-catkin--config-args "--cmake-args" args))
 
 (defun helm-catkin-config-cmake-args-add (args)
   "Add a list of cmake ARGS to the existing set of cmake arguments for the current workspace."
+  (setq helm-catkin--cmake-cache nil)  ; invalidate
   (helm-catkin--config-args "--append-args --cmake-args" args))
 
 (defun helm-catkin-config-cmake-args-remove (args)
   "Remove a list of cmake ARGS from the existing set of cmake arguments for the current workspace.
 ARGS which are currently not set and are requested to be removed don't provoce an error and are just ignored."
+  (setq helm-catkin--cmake-cache nil)  ; invalidate
   (helm-catkin--config-args "--remove-args --cmake-args" args))
 
 (defun helm-catkin-config-cmake-change (arg)
@@ -242,11 +247,14 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
 (defun helm-catkin-config-cmake-new (&optional _)
   "Prompts the user to enter a new CMake arg which will be returned."
   (interactive)
+  (setq helm-catkin--cmake-cache nil)  ; invalidate
   (helm-catkin-config-cmake-args-add (list (helm-read-string "New CMake Arg: "))))
 
 (defvar helm-catkin--helm-source-catkin-config-cmake
   (helm-build-sync-source "CMake"
-    :candidates 'helm-catkin-config-cmake-args
+    :init 'helm-catkin-config-cmake-args
+    :allow-dups nil
+    :candidates 'helm-catkin--cmake-cache
     :help-message 'helm-catkin--helm-source-catkin-config-cmake-helm-message
     :action '(("Change" . (lambda (x) (helm-catkin-config-cmake-change x) (helm-catkin)))
               ("Remove" . (lambda (_) (helm-catkin-config-cmake-args-remove (helm-marked-candidates)) (helm-catkin))))))
@@ -254,33 +262,42 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                   MAKE Args                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(setq helm-catkin--make-cache nil)
 (defun helm-catkin-config-make-args ()
   "Return a list of all currenty set make args for the current workspace."
-  (append (helm-catkin--parse-config "make_args") (helm-catkin--parse-config "jobs_args")))
+  (if helm-catkin--make-cache helm-catkin--make-cache
+    (setq helm-catkin--make-cache
+          (append (helm-catkin--parse-config "make_args")
+                  (helm-catkin--parse-config "jobs_args")))))
 
 (defun helm-catkin-config-make-args-clear ()
   "Remove all make args for the current workspace."
+  (setq helm-catkin--make-cache nil)  ; invalidate
   (helm-catkin--config-args "--no-make-args"))
 
 (defun helm-catkin-config-make-args-set (args)
   "Set a list of make ARGS for the current workspace.
 Passing an empty list to ARGS will clear all currently set args."
+  (setq helm-catkin--make-cache nil)  ; invalidate
   (helm-catkin--config-args "--make-args" args))
 
 (defun helm-catkin-config-make-args-add (args)
   "Add a list of make ARGS to the existing set of make args for the current workspace."
+  (setq helm-catkin--make-cache nil)  ; invalidate
   (helm-catkin--config-args "--append-args --make-args" args))
 
 (defun helm-catkin-config-make-args-remove (args)
   "Remove a list of make ARGS from the existing set of make arguments for the current workspace.
 ARGS which are currently not set and are requested to be removed don't provoce an error and
 are just ignored."
+  (setq helm-catkin--make-cache nil)  ; invalidate
   (helm-catkin--config-args "--remove-args --make-args" args))
 
 (defun helm-catkin-config-make-change (arg)
   "Prompt the user to enter a new value for a Make arg.
 The prompt in the minibuffer is autofilled with ARG and the new entered value will be returned."
   (interactive)
+  (setq helm-catkin--make-cache nil)  ; invalidate
   (let ((new-arg (helm-read-string "Adjust value for Make Arg: " arg)))
     (helm-catkin-config-make-args-remove (list arg))
     (helm-catkin-config-make-args-add (list new-arg))))
@@ -288,11 +305,13 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
 (defun helm-catkin-config-make-new (&optional _)
   "Prompt the user to enter a new Make arg which will be returned."
   (interactive)
+  (setq helm-catkin--make-cache nil)  ; invalidate
   (helm-catkin-config-make-args-add (list (helm-read-string "New Make Arg: "))))
 
 (defvar helm-catkin--helm-source-catkin-config-make
   (helm-build-sync-source "Make"
-    :candidates 'helm-catkin-config-make-args
+    :init 'helm-catkin-config-make-args
+    :candidates 'helm-catkin--make-cache
     :help-message 'helm-catkin--helm-source-catkin-config-make-helm-message
     :action '(("Change" . (lambda (x) (helm-catkin-config-make-change x) (helm-catkin)))
               ("Remove" . (lambda (_) (helm-catkin-config-make-args-remove (helm-marked-candidates)) (helm-catkin))))))
@@ -300,32 +319,40 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                   CATKIN-MAKE Args                         ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(setq helm-catkin--catkin-make-cache nil)
 (defun helm-catkin-config-catkin-make-args ()
   "Return a list of all currenty set catkin-make args for the current workspace."
-  (helm-catkin--parse-config "catkin_make_args"))
+  (if helm-catkin--catkin-make-cache helm-catkin--catkin-make-cache
+    (setq helm-catkin--catkin-make-cache
+          (helm-catkin--parse-config "catkin_make_args"))))
 
 (defun helm-catkin-config-catkin-make-args-clear ()
   "Remove all catkin-make ARGS for the current workspace."
+  (setq helm-catkin--catkin-make-cache nil)  ; invalidate
   (helm-catkin--config-args "--no-catkin-make-args"))
 
 (defun helm-catkin-config-catkin-make-args-set (args)
   "Set a list of catkin-make ARGS for the current workspace.
 Passing an empty list to ARGS will clear all currently set arguments."
+  (setq helm-catkin--catkin-make-cache nil)  ; invalidate
   (helm-catkin--config-args "--catkin-make-args" args))
 
 (defun helm-catkin-config-catkin-make-args-add (args)
   "Add a list of catkin-make ARGS to the existing set of catkin-make ARGS for the current workspace."
+  (setq helm-catkin--catkin-make-cache nil)  ; invalidate
   (helm-catkin--config-args "--append-args --catkin-make-args" args))
 
 (defun helm-catkin-config-catkin-make-args-remove (args)
   "Remove a list of catkin-make ARGS from the existing set of catkin make arguments for the current workspace.
 ARGS which are currently not set and are requested to be removed don't provoce an error and are just ignored."
+  (setq helm-catkin--catkin-make-cache nil)  ; invalidate
   (helm-catkin--config-args "--remove-args --catkin-make-args" args))
 
 (defun helm-catkin-config-catkin-make-change (arg)
   "Prompt the user to enter a new value for a catkin make argument.
 The prompt in the minibuffer is autofilled with ARG and the new entered value will be returned."
   (interactive)
+  (setq helm-catkin--catkin-make-cache nil)  ; invalidate
   (let ((new-arg (helm-read-string "Adjust value for Catkin-Make Arg: " arg)))
     (helm-catkin-config-catkin-make-args-remove (list arg))
     (helm-catkin-config-catkin-make-args-add (list new-arg))))
@@ -333,11 +360,13 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
 (defun helm-catkin-config-catkin-make-new (&optional _)
   "Prompt the user to enter a new Catkin-Make arg which will be returned."
   (interactive)
+  (setq helm-catkin--catkin-make-cache nil)  ; invalidate
   (helm-catkin-config-catkin-make-args-add (list (helm-read-string "New Catkin-Make Arg: "))))
 
 (defvar helm-catkin--helm-source-catkin-config-catkin-make
   (helm-build-sync-source "Catkin-Make"
-    :candidates 'helm-catkin-config-catkin-make-args
+    :init 'helm-catkin-config-catkin-make-args
+    :candidates 'helm-catkin--catkin-make-cache
     :help-message 'helm-catkin--helm-source-catkin-config-catkin-make-helm-message
     :action '(("Change" . (lambda (x) (helm-catkin-config-catkin-make-change x) (helm-catkin)))
               ("Remove" . (lambda (_) (helm-catkin-config-catkin-make-args-remove (helm-marked-candidates)) (helm-catkin))))))
@@ -345,9 +374,12 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                   Whitelist/Blacklist                      ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(setq helm-catkin--whitelist-cache nil)
 (defun helm-catkin-config-whitelist ()
   "Return a list of all currenty whitelisted packages for the current workspace."
-  (helm-catkin--parse-config "whitelist"))
+  (if helm-catkin--whitelist-cache helm-catkin--whitelist-cache
+    (setq helm-catkin--whitelist-cache
+          (helm-catkin--parse-config "whitelist"))))
 
 (defun helm-catkin-config-whitelist-add (packages)
   "Mark a list of PACKAGES to be whitelisted for the current workspace."
@@ -361,7 +393,8 @@ an error and are just ignored."
 
 (defvar helm-catkin--helm-source-catkin-config-whitelist
   (helm-build-sync-source "Whitelist"
-    :candidates 'helm-catkin-config-whitelist
+    :init 'helm-catkin-config-whitelist
+    :candidates 'helm-catkin--whitelist-cache
     :help-message 'helm-catkin--helm-source-catkin-config-whitelist-helm-message
     :action '(("Un-Whitelist" . (lambda (_) (helm-catkin-config-whitelist-remove (helm-marked-candidates)) (helm-catkin)))
               ("Build" . (lambda (_) (helm-catkin-build-package (helm-marked-candidates))))
@@ -369,9 +402,12 @@ an error and are just ignored."
               ("Open CMakeLists.txt" . (lambda (c) (helm-catkin-open-pkg-cmakelist (helm-marked-candidates))))
               ("Open package.xml" . (lambda (c) (helm-catkin-open-pkg-package (helm-marked-candidates)))))))
 
+(setq helm-catkin--blacklist-cache nil)
 (defun helm-catkin-config-blacklist ()
   "Return a list of all currenty blacklisted packages for the workspace."
-  (helm-catkin--parse-config "blacklist"))
+  (if helm-catkin--blacklist-cache helm-catkin--blacklist-cache
+    (setq helm-catkin--blacklist-cache
+          (helm-catkin--parse-config "blacklist"))))
 
 (defun helm-catkin-config-blacklist-add (packages)
   "Mark a list of PACKAGES to be blacklisted for the current workspace."
@@ -484,13 +520,14 @@ The first action [F1] is always the default choice if you just press enter.
 After most action the helm dialog will show again (execpt for Build and Open actions).
 To quit it just press ESC.")
 
-(defvaralias 'helm-catkin--helm-source-catkin-config-cmake-helm-message       'helm-catkin-helm-help-string)
-(defvaralias 'helm-catkin--helm-source-catkin-config-make-helm-message        'helm-catkin-helm-help-string)
-(defvaralias 'helm-catkin--helm-source-catkin-config-catkin-make-helm-message 'helm-catkin-helm-help-string)
-(defvaralias 'helm-catkin--helm-source-catkin-config-whitelist-helm-message   'helm-catkin-helm-help-string)
-(defvaralias 'helm-catkin--helm-source-catkin-config-blacklist-helm-message   'helm-catkin-helm-help-string)
-(defvaralias 'helm-catkin--helm-source-catkin-config-packages-helm-message    'helm-catkin-helm-help-string)
-(defvaralias 'helm-catkin--helm-source-catkin-config-new-helm-message         'helm-catkin-helm-help-string)
+(defun helm-catkin--invalidate-caches ()
+  "Remove all cached helm sources"
+  (setq helm-catkin--packages-cache nil)
+  (setq helm-catkin--whitelist-cache nil)
+  (setq helm-catkin--blacklist-cache nil)
+  (setq helm-catkin--cmake-cache nil)
+  (setq helm-catkin--make-cache nil)
+  (setq helm-catkin--catkin-make-cache nil))
 
 ;;;###autoload
 (defun helm-catkin ()
@@ -500,6 +537,8 @@ press `C-c ?' in the helm-catkin helm query.
 
 See `helm-catkin-helm-help-string'"
   (interactive)
+  (helm-catkin--invalidate-caches)
+  (message "Parsing Catkin Config...")
   (helm :buffer "*helm Catkin*"
         :sources '(helm-catkin--helm-source-catkin-config-new
                    helm-catkin--helm-source-catkin-config-cmake
@@ -511,16 +550,22 @@ See `helm-catkin-helm-help-string'"
 
 (defun helm-catkin--build-finished (process signal)
   "This get called, once the catkin build command finishes.
-It marks the buffer as read-only and asks to close the window.
+It marks the buffer as read-only and closes the window on `q'.
 PROCESS is the process which runs the build command and SIGNAL
 the signal with which the PROCESS finishes."
   (when (memq (process-status process) '(exit signal))
+    (setq window (get-buffer-window "*Catkin Build*"))
+    (shell-command-sentinel process signal)
     (message "Catkin build done!")
-    (other-window 1)      ; select the first "other" window, i.e. the build window
-    (read-only-mode)      ; mark as not-editable
-    (local-set-key (kbd "q") (lambda ()
-                               (interactive)
-                               (quit-window (get-buffer-window "*Catkin Build*"))))))
+    (select-window window)      ; select the the build window
+    (read-only-mode)            ; mark it as not-editable
+    (local-set-key (kbd "q") (lambda () (interactive) (quit-window window)))
+
+    ;; Run hooks according to build result
+    (run-hooks 'helm-catkin-build-done-hook)
+    (if (string-prefix-p "finished" signal)
+        (run-hooks 'helm-catkin-build-success-hook)
+      (run-hooks 'helm-catkin-build-error-hook))))
 
 (defun helm-catkin-build-package (&optional pkgs)
   "Build the catkin workspace after sourcing it's ws.
@@ -538,11 +583,15 @@ If PKGS is non-nil, only these packages are built, otherwise all packages in the
         (set-process-sentinel process #'helm-catkin--build-finished)
       (error "Could not attach process sentinel to \"catkin build\" since no such process is running"))))
 
+
+(setq helm-catkin--packages-cache nil)
 (defun helm-catkin-list ()
   "Return a list of all packages in the current workspace."
-  (helm-catkin--util-command-to-list
-   (format "catkin list --workspace %s --unformatted --quiet"
-           (shell-quote-argument (helm-catkin--get-workspace)))))
+  (if helm-catkin--packages-cache helm-catkin--packages-cache
+    (setq helm-catkin--packages-cache
+          (helm-catkin--util-command-to-list
+           (format "catkin list --workspace %s --unformatted --quiet"
+                   (shell-quote-argument (helm-catkin--get-workspace)))))))
 
 (defun helm-catkin-open-file-in (pkg file)
   "Open the file at `$(rospack find pkg)/file'.
@@ -612,6 +661,7 @@ and whitelist.
 
   See `helm-catkin-helm-help-string'"
   (interactive)
+  (helm-catkin--invalidate-caches)
   (helm :buffer "*helm Catkin Build*"
         :sources '(helm-catkin--helm-source-catkin-build-default-source
                    helm-catkin--helm-source-catkin-build-source)))

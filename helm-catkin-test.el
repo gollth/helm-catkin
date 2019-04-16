@@ -57,7 +57,7 @@ of nil if no match. Can be used to test if a certain change was made between the
 
 (ert-deftest test-helm-catkin--util-absolute-path-of-raises-for-unknown-package ()
   "Test if the helm-catkin--util-absolute-path function throws an error for unknown packages."
-  (helm-catkin-set-workspace path)
+  (setq helm-catkin-workspace path)
   (should-error (helm-catkin--util-absolute-path-of "some_unknown_package")))
 
 
@@ -78,11 +78,6 @@ of nil if no match. Can be used to test if a certain change was made between the
   "Test if the helm-catkin--get-workspace function throws an error for non-catkin folders."
   (setq helm-catkin-workspace npath)
   (should-error (helm-catkin--get-workspace)))
-
-(ert-deftest test-helm-catkin-set-workspace-with-args-sets-the-env ()
-  "Calling helm-catkin-set-workspace with an explicit path will set `helm-catkin-workspace' accordingly."
-  (helm-catkin-set-workspace path)
-  (should (string= helm-catkin-workspace path)))
 
 (ert-deftest test-helm-catkin--is-workspace-initialized-returns-t-for-valid-ws ()
   "Initialized workspaces are recognized as such."
@@ -211,8 +206,8 @@ Make args are a bit special, because they can be in job_args or make_args key."
   (test-helper-backup)
   (unwind-protect   ;; make sure the file is restored if an error occurs
       (progn
-        (helm-catkin-config-make-args-remove '("-j4"))
-        (should (test-helper-diff '("< - -j4"))))
+        (helm-catkin-config-make-args-remove (list "-some_make_arg"))
+        (should (test-helper-diff '("< - -some_make_arg"))))
     (test-helper-unbackup)))
 
 (ert-deftest test-helm-catkin-config-make-args-clear ()
@@ -274,7 +269,7 @@ Make args are a bit special, because they can be in job_args or make_args key."
   (unwind-protect   ;; make sure the file is restored if an error occurs
       (progn
         (helm-catkin-config-catkin-make-args-clear)
-        (should (test-helper-diff '("> jobs_args: []"))))   ;; clears jobs_args
+        (should-not (test-helper-diff '(""))))   ;; no change
     (test-helper-unbackup)))
 
 (ert-deftest test-helm-catkin-config-catkin-make-args-set ()

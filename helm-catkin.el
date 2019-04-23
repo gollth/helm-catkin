@@ -4,7 +4,7 @@
 
 ;; Author:  Thore Goll <thoregoll@googlemail.com>
 ;; Keywords: catkin, helm, build, tools, ROS
-;; Package-Requires: ((emacs "24.3") (helm "0") (xterm-color "0") (cl-lib "0.5"))
+;; Package-Requires: ((emacs "24.3") (helm "0") (xterm-color "0"))
 ;; Homepage: https://github.com/gollth/helm-catkin
 ;; Version: 1.1
 
@@ -38,7 +38,6 @@
 
 ;;; Code:
 
-(require 'cl-lib)
 (require 'helm)
 (require 'xterm-color)
 
@@ -601,13 +600,11 @@ PKG is the name of the ros package and FILE a relative path to it."
 
 (defun helm-catkin-open-pkg-cmakelist (pkgs)
   "Open the `CMakeLists.txt' file for each of the package names within PKGS."
-  (cl-loop for pkg in pkgs
-        do (helm-catkin-open-file-in pkg "CMakeLists.txt")))
+  (dolist (pkg pkgs) (helm-catkin-open-file-in pkg "CMakeLists.txt")))
 
 (defun helm-catkin-open-pkg-package (pkgs)
   "Open the `package.xml' file for each of the package names within PKGS."
-  (cl-loop for pkg in pkgs
-        do (helm-catkin-open-file-in pkg "package.xml")))
+  (dolist (pkg pkgs) (helm-catkin-open-file-in pkg "package.xml")))
 
 (defun helm-catkin-open-pkg-dired (pkg)
   "Open the absolute path of PKG in `dired'."

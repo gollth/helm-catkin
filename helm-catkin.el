@@ -53,11 +53,11 @@
   "Find the path of/in a catkin workspace. This is either `helm-catkin-workspace' if
 this is set, or the `default-directory' of the current buffer. In both cases any
 trailing slashes are removed."
-  (setq ws (or helm-catkin-workspace default-directory))
-  (setq root (expand-file-name (locate-dominating-file ws ".catkin_tools")))
-  (unless root (error (format "Cannot find catkin workspace at/above \"%s\" (.catkin_tools folder not found)" ws)))
-  ;; catkin locate crashes on trailing slashes, make sure to remove it accordingly
-  (substring (file-name-as-directory root) 0 -1))
+  (let* ((ws (or helm-catkin-workspace default-directory))
+         (root (expand-file-name (locate-dominating-file ws ".catkin_tools"))))
+    (unless root (error (format "Cannot find catkin workspace at/above \"%s\" (.catkin_tools folder not found)" ws)))
+    ;; catkin locate crashes on trailing slashes, make sure to remove it accordingly
+    (substring (file-name-as-directory root) 0 -1)))
 
 (defun helm-catkin--parse-config (key)
   (let* ((ws (helm-catkin--get-workspace))

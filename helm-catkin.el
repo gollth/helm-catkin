@@ -207,7 +207,7 @@ This function can be used to set args of a certain type like so:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                  CMAKE Args                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(setq helm-catkin--cmake-cache nil)
+(defvar helm-catkin--cmake-cache nil)
 (defun helm-catkin-config-cmake-args ()
   "Return a list of all currenty set cmake args for the workspace."
   (if helm-catkin--cmake-cache helm-catkin--cmake-cache
@@ -262,7 +262,7 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                   MAKE Args                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(setq helm-catkin--make-cache nil)
+(defvar helm-catkin--make-cache nil)
 (defun helm-catkin-config-make-args ()
   "Return a list of all currenty set make args for the current workspace."
   (if helm-catkin--make-cache helm-catkin--make-cache
@@ -319,7 +319,7 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                   CATKIN-MAKE Args                         ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(setq helm-catkin--catkin-make-cache nil)
+(defvar helm-catkin--catkin-make-cache nil)
 (defun helm-catkin-config-catkin-make-args ()
   "Return a list of all currenty set catkin-make args for the current workspace."
   (if helm-catkin--catkin-make-cache helm-catkin--catkin-make-cache
@@ -374,7 +374,7 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                   Whitelist/Blacklist                      ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(setq helm-catkin--whitelist-cache nil)
+(defvar helm-catkin--whitelist-cache nil)
 (defun helm-catkin-config-whitelist ()
   "Return a list of all currenty whitelisted packages for the current workspace."
   (if helm-catkin--whitelist-cache helm-catkin--whitelist-cache
@@ -402,7 +402,7 @@ an error and are just ignored."
               ("Open CMakeLists.txt" . (lambda (c) (helm-catkin-open-pkg-cmakelist (helm-marked-candidates))))
               ("Open package.xml" . (lambda (c) (helm-catkin-open-pkg-package (helm-marked-candidates)))))))
 
-(setq helm-catkin--blacklist-cache nil)
+(defvar helm-catkin--blacklist-cache nil)
 (defun helm-catkin-config-blacklist ()
   "Return a list of all currenty blacklisted packages for the workspace."
   (if helm-catkin--blacklist-cache helm-catkin--blacklist-cache
@@ -584,7 +584,7 @@ If PKGS is non-nil, only these packages are built, otherwise all packages in the
       (error "Could not attach process sentinel to \"catkin build\" since no such process is running"))))
 
 
-(setq helm-catkin--packages-cache nil)
+(defvar helm-catkin--packages-cache nil)
 (defun helm-catkin-list ()
   "Return a list of all packages in the current workspace."
   (if helm-catkin--packages-cache helm-catkin--packages-cache

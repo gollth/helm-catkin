@@ -66,11 +66,10 @@ trailing slashes are removed."
     (unless (helm-catkin--is-workspace-initialized ws)
       (error "Catkin workspace '%s' seems uninitialized. Use `(helm-catkin-init)' to do that now" ws))
 
-    (ignore-errors
-      (with-temp-buffer
-        (insert-file-contents path)
-        (goto-char (point-min))
-        (re-search-forward (format "^%s: *\\(\\(\n- .*$\\)+\\|\\(.*$\\)\\)" key))
+    (with-temp-buffer
+      (insert-file-contents path)
+      (goto-char (point-min))
+      (when (re-search-forward (format "^%s: *\\(\\(\n- .*$\\)+\\|\\(.*$\\)\\)" key) nil t)
         (let ((match (match-string 1)))
           (with-temp-buffer
             (insert match)

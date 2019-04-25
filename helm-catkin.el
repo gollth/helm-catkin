@@ -183,6 +183,25 @@ The config goes to a new buffer called *Catkin Config*. This can be dismissed by
   "Open the config file for the default profile of the catkin workspace."
   (find-file (format "%s/.catkin_tools/profiles/default/config.yaml" (helm-catkin--get-workspace))))
 
+;;;###autoload
+(defun helm-catkin-config-set-devel-layout (&optional type)
+  "Set the devel layout to either 'link', 'merge' or 'isolate'.
+Prompt the user if TYPE is nil."
+  (interactive)
+  (if type (helm-catkin--config-set-devel-layout type)
+    (helm :buffer "*helm Catkin Layout*"
+          :sources (helm-build-sync-source "Devel Layout"
+                     :candidates '("merge" "link" "isolate")
+                     :action '(("Set layout" . helm-catkin--config-set-devel-layout))))))
+
+(defun helm-catkin--config-set-devel-layout (type)
+  "Set the layout of devel to TYPE to either 'link', 'merge' or 'isolate'."
+  (unless (member type '("merge" "link" "isolate"))
+    (error "Cannot set devel layout to. Only 'merge', 'link' or 'isolate' are supported." type))
+  (call-process-shell-command
+   (format "catkin config --workspace %s --%s-devel"
+           (helm-catkin--get-workspace) type)))
+
 (defun helm-catkin--config-args (operation &optional args)
   "Call 'catkin config' for the workspace to execute some OPERATION.
 The ARGS are string joined with spaces and applied after the OPERATION.

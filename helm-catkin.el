@@ -4,7 +4,7 @@
 
 ;; Author:  Thore Goll <thoregoll@googlemail.com>
 ;; Keywords: catkin, helm, build, tools, ROS
-;; Package-Requires: ((emacs "24.3") (helm "0") (xterm-color "0") (cl-lib "0.5"))
+;; Package-Requires: ((emacs "24.3") (helm "0") (xterm-color "0"))
 ;; Homepage: https://github.com/gollth/helm-catkin
 ;; Version: 1.1
 
@@ -38,7 +38,6 @@
 
 ;;; Code:
 
-(require 'cl-lib)
 (require 'helm)
 (require 'xterm-color)
 
@@ -53,11 +52,12 @@
   "Find the path of/in a catkin workspace. This is either `helm-catkin-workspace' if
 this is set, or the `default-directory' of the current buffer. In both cases any
 trailing slashes are removed."
-  (setq ws (or helm-catkin-workspace default-directory))
-  (setq root (expand-file-name (locate-dominating-file ws ".catkin_tools")))
-  (unless root (error (format "Cannot find catkin workspace at/above \"%s\" (.catkin_tools folder not found)" ws)))
-  ;; catkin locate crashes on trailing slashes, make sure to remove it accordingly
-  (substring (file-name-as-directory root) 0 -1))
+  (let* ((ws (or helm-catkin-workspace default-directory))
+         (root (expand-file-name (locate-dominating-file ws ".catkin_tools"))))
+    (unless root (error (format "Cannot find catkin workspace at/above \"%s\"\
+ (.catkin_tools folder not found)" ws)))
+    ;; catkin locate crashes on trailing slashes, make sure to remove it accordingly
+    (substring (file-name-as-directory root) 0 -1)))
 
 (defun helm-catkin--parse-config (key)
   (let* ((ws (helm-catkin--get-workspace))
@@ -65,11 +65,10 @@ trailing slashes are removed."
     (unless (helm-catkin--is-workspace-initialized ws)
       (error "Catkin workspace '%s' seems uninitialized. Use `(helm-catkin-init)' to do that now" ws))
 
-    (ignore-errors
-      (with-temp-buffer
-        (insert-file-contents path)
-        (goto-char (point-min))
-        (re-search-forward (format "^%s: *\\(\\(\n- .*$\\)+\\|\\(.*$\\)\\)" key))
+    (with-temp-buffer
+      (insert-file-contents path)
+      (goto-char (point-min))
+      (when (re-search-forward (format "^%s: *\\(\\(\n- .*$\\)+\\|\\(.*$\\)\\)" key) nil t)
         (let ((match (match-string 1)))
           (with-temp-buffer
             (insert match)
@@ -184,6 +183,25 @@ The config goes to a new buffer called *Catkin Config*. This can be dismissed by
   "Open the config file for the default profile of the catkin workspace."
   (find-file (format "%s/.catkin_tools/profiles/default/config.yaml" (helm-catkin--get-workspace))))
 
+;;;###autoload
+(defun helm-catkin-config-set-devel-layout (&optional type)
+  "Set the devel layout to either 'link', 'merge' or 'isolate'.
+Prompt the user if TYPE is nil."
+  (interactive)
+  (if type (helm-catkin--config-set-devel-layout type)
+    (helm :buffer "*helm Catkin Layout*"
+          :sources (helm-build-sync-source "Devel Layout"
+                     :candidates '("merge" "link" "isolate")
+                     :action '(("Set layout" . helm-catkin--config-set-devel-layout))))))
+
+(defun helm-catkin--config-set-devel-layout (type)
+  "Set the layout of devel to TYPE to either 'link', 'merge' or 'isolate'."
+  (unless (member type '("merge" "link" "isolate"))
+    (error "Cannot set devel layout to. Only 'merge', 'link' or 'isolate' are supported." type))
+  (call-process-shell-command
+   (format "catkin config --workspace %s --%s-devel"
+           (helm-catkin--get-workspace) type)))
+
 (defun helm-catkin--config-args (operation &optional args)
   "Call 'catkin config' for the workspace to execute some OPERATION.
 The ARGS are string joined with spaces and applied after the OPERATION.
@@ -207,7 +225,7 @@ This function can be used to set args of a certain type like so:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                  CMAKE Args                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(setq helm-catkin--cmake-cache nil)
+(defvar helm-catkin--cmake-cache nil)
 (defun helm-catkin-config-cmake-args ()
   "Return a list of all currenty set cmake args for the workspace."
   (if helm-catkin--cmake-cache helm-catkin--cmake-cache
@@ -262,7 +280,7 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                   MAKE Args                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(setq helm-catkin--make-cache nil)
+(defvar helm-catkin--make-cache nil)
 (defun helm-catkin-config-make-args ()
   "Return a list of all currenty set make args for the current workspace."
   (if helm-catkin--make-cache helm-catkin--make-cache
@@ -319,7 +337,7 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                   CATKIN-MAKE Args                         ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(setq helm-catkin--catkin-make-cache nil)
+(defvar helm-catkin--catkin-make-cache nil)
 (defun helm-catkin-config-catkin-make-args ()
   "Return a list of all currenty set catkin-make args for the current workspace."
   (if helm-catkin--catkin-make-cache helm-catkin--catkin-make-cache
@@ -374,7 +392,7 @@ The prompt in the minibuffer is autofilled with ARG and the new entered value wi
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                   Whitelist/Blacklist                      ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(setq helm-catkin--whitelist-cache nil)
+(defvar helm-catkin--whitelist-cache nil)
 (defun helm-catkin-config-whitelist ()
   "Return a list of all currenty whitelisted packages for the current workspace."
   (if helm-catkin--whitelist-cache helm-catkin--whitelist-cache
@@ -402,7 +420,7 @@ an error and are just ignored."
               ("Open CMakeLists.txt" . (lambda (c) (helm-catkin-open-pkg-cmakelist (helm-marked-candidates))))
               ("Open package.xml" . (lambda (c) (helm-catkin-open-pkg-package (helm-marked-candidates)))))))
 
-(setq helm-catkin--blacklist-cache nil)
+(defvar helm-catkin--blacklist-cache nil)
 (defun helm-catkin-config-blacklist ()
   "Return a list of all currenty blacklisted packages for the workspace."
   (if helm-catkin--blacklist-cache helm-catkin--blacklist-cache
@@ -584,7 +602,7 @@ If PKGS is non-nil, only these packages are built, otherwise all packages in the
       (error "Could not attach process sentinel to \"catkin build\" since no such process is running"))))
 
 
-(setq helm-catkin--packages-cache nil)
+(defvar helm-catkin--packages-cache nil)
 (defun helm-catkin-list ()
   "Return a list of all packages in the current workspace."
   (if helm-catkin--packages-cache helm-catkin--packages-cache
@@ -601,13 +619,11 @@ PKG is the name of the ros package and FILE a relative path to it."
 
 (defun helm-catkin-open-pkg-cmakelist (pkgs)
   "Open the `CMakeLists.txt' file for each of the package names within PKGS."
-  (cl-loop for pkg in pkgs
-        do (helm-catkin-open-file-in pkg "CMakeLists.txt")))
+  (dolist (pkg pkgs) (helm-catkin-open-file-in pkg "CMakeLists.txt")))
 
 (defun helm-catkin-open-pkg-package (pkgs)
   "Open the `package.xml' file for each of the package names within PKGS."
-  (cl-loop for pkg in pkgs
-        do (helm-catkin-open-file-in pkg "package.xml")))
+  (dolist (pkg pkgs) (helm-catkin-open-file-in pkg "package.xml")))
 
 (defun helm-catkin-open-pkg-dired (pkg)
   "Open the absolute path of PKG in `dired'."

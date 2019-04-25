@@ -126,6 +126,40 @@ of nil if no match. Can be used to test if a certain change was made between the
   (setq helm-catkin-workspace path)
   (should-not (helm-catkin--parse-config "blubiblub")))
 
+(ert-deftest test-helm-catkin-set-devel-layout-raises-for-unknown-type ()
+  "Test if an unknown devel layout type is recognized."
+  (should-error (helm-catkin-config-set-devel-layout "awesome")))
+
+(ert-deftest test-helm-catkin-set-devel-layout-isolate-works ()
+  "Test if setting devel layout to isolate updates the config"
+  (setq helm-catkin-workspace path)
+  (test-helper-backup)
+  (unwind-protect   ;; make sure the file is restored if an error occurs
+      (progn
+        (helm-catkin-config-set-devel-layout "isolate")
+        (should (test-helper-diff '("> devel_layout: isolated"))))
+    (test-helper-unbackup)))
+
+(ert-deftest test-helm-catkin-set-devel-layout-link-works ()
+  "Test if setting devel layout to link updates the config"
+  (setq helm-catkin-workspace path)
+  (test-helper-backup)
+  (unwind-protect   ;; make sure the file is restored if an error occurs
+      (progn
+        (helm-catkin-config-set-devel-layout "link")
+        (should-not (test-helper-diff '(""))))  ;; no change since linked by default
+    (test-helper-unbackup)))
+
+(ert-deftest test-helm-catkin-set-devel-layout-merge-works ()
+  "Test if setting devel layout to merged updates the config"
+  (setq helm-catkin-workspace path)
+  (test-helper-backup)
+  (unwind-protect   ;; make sure the file is restored if an error occurs
+      (progn
+        (helm-catkin-config-set-devel-layout "merge")
+        (should (test-helper-diff '("> devel_layout: merged"))))
+    (test-helper-unbackup)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;              CMake Arg Tests                                           ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -188,7 +222,7 @@ of nil if no match. Can be used to test if a certain change was made between the
   "Calling helm-catkin-config-make-args returns the values from the config.yaml file.
 Make args are a bit special, because they can be in job_args or make_args key."
   (setq helm-catkin-workspace path)
-  (should (equal (helm-catkin-config-make-args) '("-some_make_arg" "-j4"))))
+  (should (equal (helm-catkin-config-make-args) '("-some_make_arg"))))
 
 (ert-deftest test-helm-catkin-config-make-args-add ()
   "Calling helm-catkin-config-make-args-add will put an entry into the config.yaml file"

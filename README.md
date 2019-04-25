@@ -37,16 +37,17 @@ Spacemacs user can put the command in the `user-init` function of `.spacemacs`:
 ```
 
 ## All features:
-| Lisp Function Name          | Explanation                                                            |
-| --------------------------- | ---------------------------------------------------------------------- |
-| `helm-catkin-set-workspace` | Sets the path to the catkin workspace for all further catkin commands  |
-| `helm-catkin-no-workspace`  | Clears the variable `helm-catkin-workspace` and uses "per-buffer" mode |
-| `helm-catkin`               | Main command for showing, configuring and building in a helm window    |
-| `helm-catkin-build`         | Build one, multiple or all packages in the current workspace           |
-| `helm-catkin-init`          | Initializes the workspace and create a src/ folder if it doesn't exist |
-| `helm-catkin-clean`         | Clean the workspace (remove build/, devel/ and install/ folders)       |
-| `helm-catkin-config-show`   | Shows the current config in a new buffer                               |
-| `helm-catkin-config-open`   | Opens the .catkin_tools/profiles/default/config.yaml file in a buffer  |
+| Lisp Function Name             | Explanation                                                            |
+| ---------------------------    | ---------------------------------------------------------------------- |
+| `helm-catkin-set-workspace`    | Sets the path to the catkin workspace for all further catkin commands  |
+| `helm-catkin-no-workspace`     | Clears the variable `helm-catkin-workspace` and uses "per-buffer" mode |
+| `helm-catkin`                  | Main command for showing, configuring and building in a helm window    |
+| `helm-catkin-build`            | Build one, multiple or all packages in the current workspace           |
+| `helm-catkin-init`             | Initializes the workspace and create a src/ folder if it doesn't exist |
+| `helm-catkin-clean`            | Clean the workspace (remove build/, devel/ and install/ folders)       |
+| `helm-catkin-config-show`      | Shows the current config in a new buffer                               |
+| `helm-catkin-config-open`      | Opens the .catkin_tools/profiles/default/config.yaml file in a buffer  |
+| `helm-catkin-set-devel-layout` | Sets the devel layout to linked, merged, or isolated.                  |
 
 > **Hint**: Use `C-h f <function-name>` to get more information about parameters
 

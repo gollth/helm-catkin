@@ -1,4 +1,6 @@
 # Emacs Catkin Package
+[![MELPA](https://melpa.org/packages/helm-catkin-badge.svg)](https://melpa.org/#/helm-catkin)
+
 This package integrates the [catkin](http://wiki.ros.org/catkin) build tool for [ROS](http://ros.org) packages into Emacs. With it you can:
 
 - Build one, multiple or all packages in the workspace

@@ -17,24 +17,7 @@ Since you have found this package I assume you have ROS installed. If you haven'
 sudo pip install catkin_tools
 ```
 
-Clone this repo into your `private` Emacs packages folder and then add the load the file in your [init file](https://gnu.org/software/emacs/manual/html_node/emacs/Init-File.html#Init-File):
-
-```bash
-git clone https://github.com/gollth/helm-catkin.git ~/.emacs.d/private/helm-catkin
-echo '(load-file ".emacs.d/private/helm-catkin/helm-catkin.el")' >> ~/.emacs
-```
-
-Spacemacs user can put the command in the `user-init` function of `.spacemacs`:
-
-```lisp
-(defun dotspacemacs/user-config ()
-
-  ;; Helm-Catkin-Tools Package
-  (load-file ".emacs.d/private/helm-catkin/helm-catkin.el")
-
-  ;; ... other user config ...
-  )
-```
+To use the package install it via Melpa: `M-x package-install RET helm-catkin RET`
 
 ## All features:
 | Lisp Function Name             | Explanation                                                            |
